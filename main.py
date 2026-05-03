@@ -1,4 +1,6 @@
 import tkinter as tk
+from tkinter import ttk
+import time 
 
 """
 
@@ -17,29 +19,36 @@ import tkinter as tk
 ░╚═════╝░╚══════╝░╚════╝░╚═════╝░╚═╝░░=╚═╝╚══════╝╚══════╝╚═════╝░
 """
 TAM = 40 # tamaño en pixels de las celdas a graficar 
-matriz = matriz = matriz = [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+matriz  = matriz = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,1,1,1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0],
     [0,0,0,0,0,0,1,1,0,0,0,0,2,0,0,0,3,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,3,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
     [0,0,1,1,1,0,0,0,0,0,0,0,2,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,2,0,0,3,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,3,0,0,2,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,2,0,0,3,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,3,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,1,1,0],
-    [0,1,1,0,0,0,0,0,0,0,0,0,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
+    [0,1,1,0,0,0,0,0,0,0,0,0,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0], 
     [0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,3,0,0,0,0,0,1,1,0,0,2,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,1,1,0,0,0,0,0,0,2,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,2,0,0,0,1,1,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
     [0,0,1,1,0,0,0,0,0,0,3,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1,1,0,0],
     [0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,3,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,2,0,3,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,3,0,0,0,0,0,0,0],
     [0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
     [0,3,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1,1,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,2,0,0,0,3,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
-            ]
+    [0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],]
 
+"""
+Info Matriz
+0 = Vacio
+1 = Bloque
+2 = Escalera
+3 = Kill Block
+4 = balas_cañon
+"""
 
 # Ubicacion inicial del jugador
 player_fila = len(matriz) -1 
@@ -50,16 +59,31 @@ facing_right = True
 is_dashing = False
 dash_restante = 0
 
+is_jumping = False
+salto_garantizado = 0
+salto_extendido = 0
+
+# Set de teclas presionadas
+teclas_presionadas = set() #Usamos un set que es una lista sin duplicados y en este caso sera mas eficiente para saber cuales teclas estan presionadas
+
+
+#Constantes para el tiempo after()
+gravedad = 80
+tick_enemigos = 0
+tick_limite = 3
+
+#Temporal
 letra = ">"
 
-gravedad = 80
-is_jumping = False
-salto_restante = 0
+# Variable Para la ubicacion de balas_cañon
+filas_balas_canon = [] #se van a ir agregando conforme los vamos leyendo
+cols_balas_canon = []
+direccion_balas_canon = []
 
 # GUI 
 ventana = tk.Tk() 
 ventana.title("Juego de Canvas")
-
+ventana.geometry("1920x1080")
 """
 
 ░█████╗░░█████╗░███╗░░██╗██╗░░░██╗░█████╗░░██████╗
@@ -75,8 +99,9 @@ canvas = tk.Canvas(
     height=len(matriz) * TAM, 
     bg = "White"
     )
-canvas.pack()
+canvas.place(relx = 0.09, rely= 0, anchor="nw")
 
+#_ Dibujar mapa
 def dibujar_mapa():
     canvas.delete("all") # reiniciar el mapa
     for i in range(len(matriz)):
@@ -95,7 +120,8 @@ def dibujar_mapa():
                 color = "brown"
             elif valor == 3: #Bloque 
                 color = "red"
-            
+         
+
             # Dibujamos el cuadrado de cada celda
             canvas.create_rectangle(x1,y1,x2,y2, fill=color, outline="black") #Borde negro de la matriz ELIMINAR al terminar
 
@@ -108,7 +134,9 @@ def dibujar_mapa():
                     font = ("Arial", 16, "bold")
                 )
     dibujar_player() #Dibuja al player de una vez
+    dibujar_enemigos() #Dibuja el enemigo
 
+#Dibujar al jugador
 def dibujar_player():
     global letra
     x1 = player_col * TAM + 5
@@ -124,6 +152,53 @@ def dibujar_player():
         font = ("Arial", 16, "bold")
         )
 
+#Dibujar a los enemigos 
+#Primero encontramos sus posiciones
+def encontrar_enemigos():
+    global filas_balas_canon, cols_balas_canon
+    for i in range(len(matriz)):
+        for j in range(len(matriz[0])):
+            if matriz[i][j] == 4: #Igual a un enemigo
+                filas_balas_canon.append(i) #Guardamos la fila y la columna
+                cols_balas_canon.append(j)
+                direccion_balas_canon.append(-1)
+
+#Luego los dibujamos // Por el momento seran dibujos
+def dibujar_enemigos():
+    global filas_balas_canon, cols_balas_canon 
+    for i in range(len(filas_balas_canon)): #ambas tendran el mismo largo  
+        x1 = cols_balas_canon[i] * TAM + 7
+        y1 = filas_balas_canon[i] * TAM + 7
+        x2 = x1 + TAM - 15
+        y2 = y1 + TAM - 15
+        canvas.create_oval(x1, y1, x2, y2, fill="black", outline = "black")
+        canvas.create_text(
+        x1 * TAM + TAM/2,
+        y1 * TAM + TAM/2,
+        )
+
+def mover_balas_canon():
+    global filas_balas_canon, cols_balas_canon 
+
+    for i in range(len(filas_balas_canon)):
+        nueva_col = cols_balas_canon[i] + direccion_balas_canon[i] )
+        if puede_moverse(filas_balas_canon[i], nueva_col):
+            if matriz[filas_balas_canon[i]][nueva_col] != 2: #Evitamos destruir una escalera
+                if matriz[filas_balas_canon[i]][cols_balas_canon[i]] != 2 :#Verificar tanto antes de entrar como despues
+                    matriz[filas_balas_canon[i]][cols_balas_canon[i]] = 0 #Eliminamos la vieja posicion
+                    matriz[filas_balas_canon[i]][nueva_col] = 4 #Sustituimos la posicion
+                else:
+                    matriz[filas_balas_canon[i]][cols_balas_canon[i]] = 2
+                    matriz[filas_balas_canon[i]][nueva_col] = 4
+            else :
+                matriz[filas_balas_canon[i]][nueva_col] = 2
+
+            cols_balas_canon[i] = nueva_col #Sustituimos el valor de esta posicion
+        else:
+            direccion_balas_canon[i] *= -1
+      
+
+#Movimiento Jugador 
 """
 
 ███╗░░░███╗░█████╗░██╗░░░██╗██╗███╗░░░███╗██╗███████╗███╗░░██╗████████╗░█████╗░
@@ -141,9 +216,7 @@ def dibujar_player():
 ╚═╝░░░░░╚══════╝╚═╝░░╚═╝░░░╚═╝░░░╚══════╝╚═╝░░╚═╝
 """
 def mover(event): 
-#META, reworkear el movimiento para poder hacer mas de dos acciones a la vez, pero con el code que tenemos puede que sea suficiente
-#Multiples comandos a la vez
-    global player_col, player_fila, facing_right, is_jumping, salto_restante, dash_restante, is_dashing, letra#Indicar que son variables globales
+    global player_col, player_fila, facing_right, is_jumping, salto_garantizado, dash_restante, is_dashing, letra, salto_extendido #Indicar que son variables globales
     nueva_fila = player_fila
     nueva_col = player_col
     #Movimiento Regular    
@@ -162,8 +235,9 @@ def mover(event):
     
     #Salto
     elif event.keysym == "space" :
-        if salto_restante == 0 and (not is_jumping) and not esta_en_aire(player_fila, player_col): # Verificar que no haya un salto en curso, y que no este en aire (tuve un bug en el que mi personaje podia empezar a caer y saltar en medio aire)
-             salto_restante += 5
+        if salto_garantizado == 0 and (not is_jumping) and not esta_en_aire(player_fila, player_col): # Verificar que no haya un salto en curso, y que no este en aire (tuve un bug en el que mi personaje podia empezar a caer y saltar en medio aire)
+             salto_garantizado = 3
+             salto_extendido = 3 #Por alguna razon, garantizado siempre le da uno al garantizado
              is_jumping = True  #Basicamente solo cambiamos los valores porque ya tenemos otras funciones que van a aplicar el salto
         else :
              pass # Si hay un salto pues se pasa
@@ -175,19 +249,19 @@ def mover(event):
         if not is_dashing and dash_restante == 0:
             dash_restante = 3
             is_dashing = True
-            salto_restante = 0
+            salto_garantizado = 0
     elif event.keysym == "e":
         facing_right = True #Si bien ya esta arriba, seria contraituitivo que el personaje camine para la izquierda viendo a la derecha
         letra = ">"
         if not is_dashing and dash_restante == 0:
             dash_restante = 3
             is_dashing = True
-            salto_restante = 0
+            salto_garantizado = 0
     elif event.keysym == "Shift_L": 
         if not is_dashing and dash_restante == 0:
             dash_restante = 3
             is_dashing = True
-            salto_restante = 0 # Le quito el salto, ya que hace que el dash sea mas manejable y me inspiro en titulos como hollow knight
+            salto_garantizado = 0 # Le quito el salto, ya que hace que el dash sea mas manejable y me inspiro en titulos como hollow knight
 
     if puede_moverse(nueva_fila, nueva_col): #Como si se puede mover, se cambian los valores de las filas y cols
         player_fila = nueva_fila
@@ -200,25 +274,33 @@ def aplicar_dash():
     global facing_right, player_fila, player_col, dash_restante, is_dashing
     if is_dashing and dash_restante > 0: 
             if facing_right:
-                if matriz[player_fila][player_col + 1] == 2: #Caso para detenernos con la escalera
-                    player_col += 1
+                if player_col + 1 < len(matriz[0]): # Evitar out of range
+                    if matriz[player_fila][player_col + 1] == 2: #Caso para detenernos con la escalera
+                        player_col += 1
+                        is_dashing = False
+                        dash_restante = 0
+                    elif puede_moverse(player_fila, player_col +1): #Caso en que nos podamos mover $ Si tocamos un borde, hace index out of
+                        player_col += 1
+                        dash_restante -= 1
+                    else : #Caso de que NO nos podamos mover ni estemos llegando a una escalera
+                        dash_restante = 0
+                else:
                     is_dashing = False
-                    dash_restante = 0
-                elif puede_moverse(player_fila, player_col +1): #Caso en que nos podamos mover
-                    player_col += 1
-                    dash_restante -= 1
-                else : #Caso de que NO nos podamos mover ni estemos llegando a una escalera
                     dash_restante = 0
             else: # Ver a la izquierda
-                 if matriz[player_fila][player_col - 1] == 2:
-                    player_col -= 1
-                    is_dashing = False
-                    dash_restante = 0
-                 elif puede_moverse(player_fila, player_col -1):
-                    player_col -= 1
-                    dash_restante -= 1
-                 else :
-                    dash_restante = 0
+                    if player_col - 1 >= 0:
+                        if matriz[player_fila][player_col - 1] == 2:
+                            player_col -= 1
+                            is_dashing = False
+                            dash_restante = 0
+                        elif puede_moverse(player_fila, player_col -1):
+                            player_col -= 1
+                            dash_restante -= 1
+                        else :
+                            dash_restante = 0
+                    else:
+                        is_dashing = False
+                        dash_restante = 0
     else :
         if not esta_en_aire(player_fila, player_col): #Decimos que termino el dash hasta que toquemos el piso o un bloque
             is_dashing = False 
@@ -227,18 +309,31 @@ def aplicar_dash():
 
 # Logica del salto
 def aplicar_salto():
-    global player_fila, player_col, salto_restante, is_jumping #tomamos variables
-    if is_jumping and salto_restante > 0:
-        if puede_moverse(player_fila  -1, player_col): #Verificar que no choque con algo
-             player_fila -= 1
-             salto_restante -= 1 #Siempre le bajamos al salto, si no flotariamos
-        else : #Significa que el personaje choca, terminando el salto
-             salto_restante = 0
-    
+    global player_fila, player_col, salto_garantizado, is_jumping, teclas_presionadas, salto_extendido #tomamos variables
+    nueva_fila = player_fila -1 #acortar la redaccion 
+    if is_jumping and (salto_garantizado > 0 or salto_extendido > 0): #es un or ya que los 2 se gastan
+        if salto_garantizado > 0: # Si tiene salto garantizado
+            if puede_moverse(nueva_fila, player_col): #verificar que haya movimiento
+                salto_garantizado -= 1
+                player_fila = nueva_fila
+            else:
+                salto_extendido = 0 #Si no se puede mover, eliminar todo salto
+                salto_garantizado = 0
+        elif salto_extendido > 0 and "space" in teclas_presionadas: #Si se acabo el salto garantizado pero para extenderlo y presiono 0
+            if puede_moverse(nueva_fila, player_col): 
+                salto_extendido -= 1
+                player_fila = nueva_fila
+            else :
+                salto_garantizado = 0 
+                salto_extendido = 0
+        elif "space" not in teclas_presionadas and salto_extendido > 0: #Caso en donde no hay salto extendido
+            salto_extendido = 0
+
     elif is_jumping: #Resetear el salto hasta que toque una plataforma
         if not(esta_en_aire(player_fila, player_col)):
             is_jumping = False #hasta que toque algo que no sea aire
 
+  
 """
 
 ██╗░░░██╗███████╗██████╗░██╗███████╗██╗░█████╗░░█████╗░██████╗░
@@ -272,6 +367,23 @@ def puede_escalar(fila, col): #Verificamos si el jugador esta encima de una esca
             return True
     except:
          return False
+    
+#Verificar si esta en el aire o en una escalera
+def esta_en_escalera(player_fila, player_col):
+    if matriz[player_fila][player_col] == 2:
+        return True
+    return False # esto nos sirve para verificar que no se caiga el personaje mientras este en la escalera
+
+def esta_en_aire(fila, col):
+    try : #Use un try para evitar un outofbounds error
+        if matriz[fila + 1 ][col] == 0: 
+                return True
+            
+        else :
+            return False #Si es diferente a 0, pues no esta en el aire
+    except :
+        return False #Si se salio, significa que esta en un borde
+    
 
 """
 ██╗░░░░░░█████╗░░██████╗░██╗░█████╗░░█████╗░  ░██████╗░██████╗░░█████╗░██╗░░░██╗███████╗██████╗░░█████╗░██████╗░
@@ -281,26 +393,9 @@ def puede_escalar(fila, col): #Verificamos si el jugador esta encima de una esca
 ███████╗╚█████╔╝╚██████╔╝██║╚█████╔╝██║░░██║  ╚██████╔╝██║░░██║██║░░██║░░╚██╔╝░░███████╗██████╔╝██║░░██║██████╔╝
 ╚══════╝░╚════╝░░╚═════╝░╚═╝░╚════╝░╚═╝░░╚═╝  ░╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░╚══════╝╚═════╝░╚═╝░░╚═╝╚═════╝░
 """
-#Verificar si esta en el aire o en una escalera
-
-def esta_en_escalera(player_fila, player_col):
-    if matriz[player_fila][player_col] == 2:
-        return True
-    return False # esto nos sirve para verificar que no se caiga el personaje mientras este en la escalera
-
-def esta_en_aire(fila, col):
-    try : #Use un try para evitar un outofbounds error
-        if matriz[fila + 1 ][col] == 0:
-            return True
-        else :
-            return False #Si es diferente a 0, pues no esta en el aire
-    except :
-        return False #Si se salio, significa que esta en un borde
-    
-
 def aplicar_gravedad():
-    global player_fila, player_col, salto_restante # Usar la variable global que contiene la posicion del jugador y el salto del jugador
-    if salto_restante > 0 or dash_restante > 0: #Para hacer el dash mas facil e intuitivo de usar, simplemente cancelamos la gravedad al hacer un dash
+    global player_fila, player_col, salto_garantizado # Usar la variable global que contiene la posicion del jugador y el salto del jugador
+    if salto_garantizado > 0 or salto_extendido > 0 or dash_restante > 0: #Para hacer el dash mas facil e intuitivo de usar, simplemente cancelamos la gravedad al hacer un dash
         pass # no hace nada, simplemente dejamos que suba 
              # En palabras simples, cancelamos la gravedad para aplicar el salto
     else :
@@ -314,11 +409,15 @@ def aplicar_gravedad():
             pass 
 
 def game_loop(): 
-    global gravedad
+    global gravedad, tick_enemigos, tick_limite
     ventana.after(gravedad, game_loop)
     aplicar_salto()
     aplicar_dash()
     aplicar_gravedad() #primero activamos la gravedad
+    tick_enemigos += 1
+    if tick_enemigos >= tick_limite: #Basicamente, tiene que actualizarse la gravedad 3 veces para que los enemigos se empiezen a mover, esto lo hize porque son muy rapidos
+        mover_balas_canon()
+        tick_enemigos = 0
     dibujar_mapa() # luego dibujamos
 """
 
@@ -329,16 +428,30 @@ def game_loop():
 ███████╗╚█████╔╝╚█████╔╝██║░░░░░██████╔╝
 ╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═════╝░
 """
-ventana.bind("<Key>", mover) # Detecta un evento, llama a la funcion "mover"
-#Llamar a la funcion de dibujo de mapa
-dibujar_mapa()
-#Llamar a la funcion de gravedad
+
+#Logica de teclas
+def presionar_tecla(event):
+    if event.keysym not in teclas_presionadas:
+        mover(event) # llamamos al movimiento
+        teclas_presionadas.add(event.keysym)
+
+def soltar_tecla(event):
+    teclas_presionadas.discard(event.keysym)
+
+#Binds
+ventana.bind("<KeyPress>", presionar_tecla)
+ventana.bind("<KeyRelease>", soltar_tecla)
+#Poblar lista de enemigos
+encontrar_enemigos()
+#Llamar al loop del juego
 game_loop() 
 #Main loop
 ventana.mainloop()
 
-#Para el chante del futuro
-# Trabajemos en una matriz mas grande y definamos salto y preguntemosle a julian como siente las mecanicas
-# Luego empezemos con la vida, enemigos y obstaculos, jump_pad?
-# Luego main menu
-# Por ultimo constructor
+# Para el chante del futuro
+# Problemas
+# Colision con enemigos y obstaculosd
+
+#Enemigos que se mueven
+#Rework a toda la gravedad 
+#Gravedad especifica para el enemigo
