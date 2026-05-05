@@ -5,12 +5,25 @@ import time
 import variables 
 from variables import *
 
+# Acceder a la informacion al abrir el documento
+def leer_archivo():
+    global saved_highscores, saved_puntos
+    try: #Se intenta por si este esta vacio
+        file = open("high_scores.txt", "r") #R es read
+        for jugador in file:
+            datos = jugador.strip().split("/") #Para cada_jugador, se parte los datos en 3 separados por slash/  y para evitar bugs hacemos strip "Eliminar espacios"
+            saved_highscores.append(datos)
+            saved_puntos.append(int(datos[1]))
+        file.close() #Cerrar el archivo es buena practica
+    except :
+        pass #Significa que no hay un archivo
+
+leer_archivo()
 
 # Se define root
 root = tk.Tk() 
 root.title("GatoAventuras")
 root.geometry("600x800")
-
 
 """
 
@@ -22,7 +35,6 @@ root.geometry("600x800")
 ░╚═════╝░╚═╝░░╚═╝╚═╝░░░░░╚═╝╚══════╝  ╚══════╝░╚════╝░░╚═════╝░╚═╝░╚════╝░
 """
 
-print(teclas_presionadas)
 
 """
 
@@ -317,7 +329,6 @@ def aplicar_gravedad():
         else :
             pass 
 
-  
 """
 
 ██╗░░░██╗███████╗██████╗░██╗███████╗██╗░█████╗░░█████╗░██████╗░
@@ -404,7 +415,6 @@ def hay_colision_enemigos():
         return True
     return False
 
-
 def calculo_puntos_base():
     global player_puntos, puntos_base
     puntos_base = 0# Resetearlo cada vez que lo calculemos
@@ -460,7 +470,7 @@ def hay_colision_objetivo():
     return False
 
 def comprobacion_ganar_perder():
-    global player_hp, objetos_a_recolectar , paused_game, player_casillas_restantes, puntos_finales, player_puntos
+    global player_hp, objetos_a_recolectar , paused_game, player_casillas_restantes, player_puntos_finales, player_puntos
     puntos_finales = 0
     eliminar_enemigo()
     if hay_colision_enemigos():
@@ -472,14 +482,24 @@ def comprobacion_ganar_perder():
             paused_game = True
             reset_game()
             
-    elif player_casillas_restantes == 0 and objetos_a_recolectar != 0: #Es decir que no perdamos por una milesima
-        ventana_actual.after(1, perdiste_default)
-
+    elif player_casillas_restantes == 0:
+        if objetos_a_recolectar == 0: #Que nos quedamos sin energia pero llegamos a la meta
+            puntos_finales = player_puntos
+            reset_game() # por si quiere volver a intentarlo
+            ventana_actual.after(1, victoria_default)
+        else: 
+            player_hp -= 1
+            reset_game()
+            if player_hp == 0:
+                ventana_actual.after(1, perdiste_default) # Asegurarnos de que game loop no se ejecte mientras cambiamos de ventana
+                reset_game()
+    
+        
     elif hay_colision_objetivo(): #Si compartimos ubicacion con el objetivo
         objetos_a_recolectar -= 1
         matriz[player_fila][player_col] = 0 #eliminamos el objetivo a recolectar
         if objetos_a_recolectar == 0:
-            puntos_finales = player_puntos
+            player_puntos_finales = player_puntos
             reset_game() # por si quiere volver a intentarlo
             ventana_actual.after(1, victoria_default)
 
@@ -521,7 +541,7 @@ def game_loop():
 """
 
 def reset_game(): #Al cerrar o perder vidas, debemos reiniciar el juego
-    global filas_a_mantener, cols_a_mantener, direccion_a_mantener, player_fila, matriz, matriz_original, player_col, facing_right, objetos_a_recolectar, is_dashing, dash_restante, is_jumping, salto_extendido, salto_garantizado, paused_game, player_casillas_restantes, filas_balas_canon, cols_balas_canon, direccion_balas_canon
+    global matriz, matriz_original, filas_a_mantener, cols_a_mantener, direccion_a_mantener, player_fila, matriz, matriz_original, player_col, facing_right, objetos_a_recolectar, is_dashing, dash_restante, is_jumping, salto_extendido, salto_garantizado, paused_game, player_casillas_restantes, filas_balas_canon, cols_balas_canon, direccion_balas_canon
     matriz = copy.deepcopy(matriz_original)
     player_fila = len(matriz) -1 
     player_col = 0
@@ -537,7 +557,7 @@ def reset_game(): #Al cerrar o perder vidas, debemos reiniciar el juego
     objetos_a_recolectar = 0
     direccion_balas_canon = []
     paused_game = False
-    player_casillas_restantes = 90
+    player_casillas_restantes = 90 # Reworkear esto para futuro "Numero de Casillas"
     filas_a_mantener = []
     cols_a_mantener = []
     direccion_a_mantener = []
@@ -554,7 +574,16 @@ def reintentar():
     ventana_actual.destroy()
     objetos_a_recolectar = 0
     iniciar_juego_default()
-  
+
+def finalizar_juego_default(): #salirnos del Juego
+    global player_hp, player_casillas_restantes
+    player_hp = 3
+    player_casillas_restantes = 90
+    reset_game()
+    objetos_a_recolectar = 0
+    dibujar_mapa()
+    ventana_actual.destroy()
+
 """
 
 ▒█▄░▒█ ▀█▀ ▀█░█▀ █▀▀ █░░ 　 ▒█▀▀▄ █▀▀ █▀▀ █▀▀█ █░░█ █░░ ▀▀█▀▀ 
@@ -562,23 +591,31 @@ def reintentar():
 ▒█░░▀█ ▄█▄ ░░▀░░ ▀▀▀ ▀▀▀ 　 ▒█▄▄▀ ▀▀▀ ▀░░ ▀░░▀ ░▀▀▀ ▀▀▀ ░░▀░░
 """
 def iniciar_juego_default():
-    global juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
+    global player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
     #Primero creamos un TopLevel
     global canvas, default_game 
     global ventana_actual
     default_game = tk.Toplevel()
     ventana_actual = default_game
-    ventana_actual.title("Juego")
+    ventana_actual.title("Juego_Constructor")
     ventana_actual.geometry("1700x900")
     ventana_actual.resizable(False,False)
     ventana_actual.grab_set()
     ventana_actual.focus()
     juego_activo = True
+    
+    #Empezar cambiando la matriz a usar
+    matriz = copy.deepcopy(matriz_default)
+    matriz_original = copy.deepcopy(matriz_original_default)
+    #Definir la posicion del jugador 
+    player_fila = len(matriz) -1 
+    player_col = 0
 
     #Asegurarnos de que para el default si existan suficientes movimientos
     player_hp = 3
     player_casillas_restantes = 90
-    
+    mapa_actual = "Predeterminado" #Esto nos servira para la escritura de highscores
+
     #Hacemos que la ventana actual sea la que se esta usando para poder tener la logica para el constructor de mapas
 
     #Creamos el Canvas
@@ -618,6 +655,8 @@ def iniciar_juego_default():
     player_objetivos_label = tk.Label(ventana_actual, text=f"Objetos por recolectar : {objetos_a_recolectar}", relief= "groove")
     player_objetivos_label.place(relx = 0.7, rely= 0.9)
 
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
+
     #Llamar al loop del juego
     game_loop() 
 
@@ -644,9 +683,10 @@ def perdiste_default():
     reintentar_default_boton.pack()
     perdiste_puntos_label = tk.Label(ventana_actual, text="No obtuviste ningun punto")
     perdiste_puntos_label.pack()
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
    
 def victoria_default():
-    global ganar, ventana_actual, juego_activo, player_puntos_final, puntos_finales
+    global ganar, ventana_actual, juego_activo, player_puntos_finales, puntos_finales
     juego_activo = False
     ventana_actual.destroy()
     ganar = tk.Toplevel()
@@ -666,21 +706,435 @@ def victoria_default():
     ganaste_boton.pack()
     reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:iniciar_juego_default())
     reintentar_default_boton.pack()
-    ganaste_puntos_label = tk.Label(ventana_actual, text=f"Puntos Obtenidos: {puntos_finales}")
+    ganaste_puntos_label = tk.Label(ventana_actual, text=f"Puntos Obtenidos: {player_puntos_finales}")
     ganaste_puntos_label.pack()
 
-def finalizar_juego_default(): #salirnos del Juego
-    global player_hp
-    player_hp = 3
-    reset_game()
-    objetos_a_recolectar = 0
-    encontrar_enemigos()
-    encontrar_objetivos()
-    dibujar_mapa()
-    ventana_actual.destroy()
+    if verificar_top5(): #Si el puntaje actual es posible highscore, todo bien
+        escribir_high_score = tk.Button(ventana_actual, text="¿Guardar HighScore?", command=lambda: pantalla_escritura_highscore())
+        escribir_high_score.pack()
+   
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 
+
+"""
+██╗░░██╗██╗░██████╗░██╗░░██╗░░░░░░░██████╗░█████╗░░█████╗░██████╗░███████╗░██████╗
+██║░░██║██║██╔════╝░██║░░██║░░░░░░██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝
+███████║██║██║░░██╗░███████║█████╗╚█████╗░██║░░╚═╝██║░░██║██████╔╝█████╗░░╚█████╗░
+██╔══██║██║██║░░╚██╗██╔══██║╚════╝░╚═══██╗██║░░██╗██║░░██║██╔══██╗██╔══╝░░░╚═══██╗
+██║░░██║██║╚██████╔╝██║░░██║░░░░░░██████╔╝╚█████╔╝╚█████╔╝██║░░██║███████╗██████╔╝
+╚═╝░░╚═╝╚═╝░╚═════╝░╚═╝░░╚═╝░░░░░░╚═════╝░░╚════╝░░╚════╝░╚═╝░░╚═╝╚══════╝╚═════╝░
+"""
+def pantalla_escritura_highscore():
+    global juego_activo, ventana_actual, nuevo_nombre, mapa_actual, digitar_nombre
+    juego_activo = False
+    ventana_actual.destroy()
+    highscore_pantalla = tk.Toplevel()
+    ventana_actual = highscore_pantalla
+    ventana_actual.resizable(False,False)
+    ventana_actual.grab_set()
+    ventana_actual.focus()
+
+    #Config de la ventana : 
+    ventana_actual.title("Guardar_HighScore -- GatoAventuras")
+    ventana_actual.geometry("600x800")
+
+
+    #Widgets 
+    digitar_nombre = tk.Entry(ventana_actual)
+    digitar_nombre.config(font=("Arial, 14"), justify="center")
+    digitar_nombre.pack()
+    digitar_nombre.insert(0,"Inserte su nombre")
+
+    boton_confirmar_nombre = tk.Button(ventana_actual, text="Confirmar Nombre", command=lambda: verificar_nombre())
+    boton_confirmar_nombre.pack() 
+
+    boton_submit_highscore = tk.Button(ventana_actual, text="Guardar HighScore", command=lambda: agregar_score())
+    boton_submit_highscore.pack()
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
+
+def show_highscores():
+    global juego_activo, ventana_actual, saved_highscores
+    juego_activo = False
+    show_highscore_pantalla = tk.Toplevel()
+    ventana_actual = show_highscore_pantalla
+    ventana_actual.resizable(False,False)
+    ventana_actual.grab_set()
+    ventana_actual.focus()
+     
+    #Config de la ventana : 
+    ventana_actual.title("HighScores -- GatoAventuras")
+    ventana_actual.geometry("600x800")
+
+    try:
+        for i in range(len(saved_highscores)):
+            datos = saved_highscores[i]
+            texto = f"{i+1}. {datos[0]} — {datos[1]} pts — {datos[2]}"
+            label = tk.Label(ventana_actual, text=texto, font=("Arial", 12))
+            label.pack()
+    except:
+        no_hay_hs =tk.Label(ventana_actual, text="No hay puntajes guardados :(")
+        no_hay_hs.pack()
+
+    cerrar_ventana = tk.Button(ventana_actual, text="Cerrar", command=lambda: ventana_actual.destroy())
+    cerrar_ventana.pack(pady=10)
+    
+
+def verificar_nombre():
+    global nombre_nuevo, digitar_nombre 
+    nombre_nuevo = digitar_nombre.get()
+    if "/" in nombre_nuevo or nombre_nuevo == "" or nombre_nuevo == "Inserte su nombre" or nombre_nuevo == "Digite un nombre válido":
+        nombre_nuevo = "Digite un nombre válido"
+        return nombre_nuevo 
+    else :
+        nombre_nuevo = nombre_nuevo
+        return nombre_nuevo 
+    
+def verificar_top5():
+    global saved_puntos, player_puntos_finales
+    if len(saved_puntos) < 5: #Hay campo libre
+        return True
+    if player_puntos_finales > min(saved_puntos):
+        return True  #Supera al puntaje minimo y luego tenemos que ver en que posicion escalo
+    return False #No alcanzo 
+
+def agregar_score():
+    global ventana_actual, saved_puntos, player_puntos_finales, saved_highscores, mapa_actual, nuevo_nombre, digitar_nombre
+    nuevo_nombre = digitar_nombre.get()
+    ventana_actual.destroy() #destruimos el toplevel
+    if len(saved_puntos) < 5: #entra de una
+        saved_puntos.append(player_puntos_finales)
+        saved_puntos = sorted(saved_puntos, reverse=True) #orden reverso sera de mayor a menor
+        saved_highscores.append([nuevo_nombre, player_puntos_finales, mapa_actual])
+        saved_highscores = sorted(saved_highscores, key= lambda x: int(x[1]), reverse=True)
+    else : #Si tenemos los cinco espacios ocupados
+        punto_a_eliminar = min(saved_puntos)#eliminamos el punto minimo
+        index_a_eliminar = 0
+        for i in range(len(saved_puntos)):
+            if saved_highscores[i][1] == punto_a_eliminar:
+                index_a_eliminar = i
+                break
+       
+        # eliminar datos
+        saved_puntos.pop(index_a_eliminar) #Usan el mismo ya que ambas comparten el mismo orden
+        saved_highscores.pop(index_a_eliminar)  
+
+        #Agregar nuevos datos 
+        saved_puntos.append(player_puntos_finales)
+        saved_puntos = sorted(saved_puntos, reverse=True) #orden reverso sera de mayor a menor
+        saved_highscores.append([nuevo_nombre, player_puntos_finales, mapa_actual])
+        saved_highscores = sorted(saved_highscores, key= lambda x: int(x[1]), reverse=True) # El key es en base a que, entonces llamamos una funcion lambda, que recorrera dentro de la matriz, la posicion 1, que son los datos
+    
+    escritura_highscores()
+    mapa_actual = "" #Vamos a regresar al main menu
+
+def escritura_highscores():
+    global saved_highscores
+    file = open("high_scores.txt", "w") # No lo vaciamos, ya que "w" se encarga de eso por nosotros
+    for i in saved_highscores:
+        file.write(f"{i[0]}/{i[1]}/{i[2]}\n") #f string, el {} es donde va el texto, lo demas es ttexto
+    file.close()
+
+"""
+
+░█████╗░░█████╗░███╗░░██╗░██████╗████████╗██████╗░██╗░░░██╗░█████╗░████████╗░█████╗░██████╗░  ██████╗░███████╗
+██╔══██╗██╔══██╗████╗░██║██╔════╝╚══██╔══╝██╔══██╗██║░░░██║██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗  ██╔══██╗██╔════╝
+██║░░╚═╝██║░░██║██╔██╗██║╚█████╗░░░░██║░░░██████╔╝██║░░░██║██║░░╚═╝░░░██║░░░██║░░██║██████╔╝  ██║░░██║█████╗░░
+██║░░██╗██║░░██║██║╚████║░╚═══██╗░░░██║░░░██╔══██╗██║░░░██║██║░░██╗░░░██║░░░██║░░██║██╔══██╗  ██║░░██║██╔══╝░░
+╚█████╔╝╚█████╔╝██║░╚███║██████╔╝░░░██║░░░██║░░██║╚██████╔╝╚█████╔╝░░░██║░░░╚█████╔╝██║░░██║  ██████╔╝███████╗
+░╚════╝░░╚════╝░╚═╝░░╚══╝╚═════╝░░░░╚═╝░░░╚═╝░░╚═╝░╚═════╝░░╚════╝░░░░╚═╝░░░░╚════╝░╚═╝░░╚═╝  ╚═════╝░╚══════╝
+
+███╗░░░███╗░█████╗░██████╗░░█████╗░░██████╗
+████╗░████║██╔══██╗██╔══██╗██╔══██╗██╔════╝
+██╔████╔██║███████║██████╔╝███████║╚█████╗░
+██║╚██╔╝██║██╔══██║██╔═══╝░██╔══██║░╚═══██╗
+██║░╚═╝░██║██║░░██║██║░░░░░██║░░██║██████╔╝
+╚═╝░░░░░╚═╝╚═╝░░╚═╝╚═╝░░░░░╚═╝░░╚═╝╚═════╝░
+"""
+def iniciar_creador_de_mapas():
+    global  canvas, constructor_mapas, constructor_fila, constructor_col, ventana_actual, label_puntos_creador, entry_cambiar_vida
+    constructor_mapas = tk.Toplevel()
+    ventana_actual = constructor_mapas
+    ventana_actual.title("Constructor de Mapas")
+    ventana_actual.geometry("1700x900")
+    ventana_actual.resizable(False,False)
+    ventana_actual.grab_set()
+    ventana_actual.focus()
+
+    #Creamos el Canvas
+    canvas = tk.Canvas(
+    ventana_actual, 
+    width=len(matriz_constructor[0]) * TAM, #Se hace el canvas en base al tamaño de la matriz
+    height=len(matriz_constructor) * TAM, 
+    bg = "White"
+    )
+    canvas.place(relx= 0.05, anchor="nw")
+
+    #Luego de esto creamos los botones para cambiar las posiciones!!!
+    poner_vacio = tk.Button(ventana_actual, text="Vacio", command=lambda: cambiar_bloque(0))
+    poner_vacio.place(relx=0.0, rely=0.1)
+    poner_bloque = tk.Button(ventana_actual, text="Bloque", command=lambda: cambiar_bloque(1))
+    poner_bloque.place(relx=0.0, rely=0.2)
+    poner_escalera = tk.Button(ventana_actual, text="Escalera", command=lambda: cambiar_bloque(2))
+    poner_escalera.place(relx=0.0, rely=0.3)
+    poner_trampa = tk.Button(ventana_actual, text="Trampa", command=lambda: cambiar_bloque(3))
+    poner_trampa.place(relx=0.0, rely=0.4)
+    poner_enemigo = tk.Button(ventana_actual, text="Enemigo", command=lambda: cambiar_bloque(4))
+    poner_enemigo.place(relx=0.0, rely=0.5)
+    poner_objetivo = tk.Button(ventana_actual, text="Objetivo", command=lambda: cambiar_bloque(5))
+    poner_objetivo.place(relx=0.0, rely=0.6)
+    poner_inicio = tk.Button(ventana_actual, text="Punto de Inicio", command=lambda: cambiar_bloque(6))
+    poner_inicio.place(relx=0.0, rely=0.7)
+    borrar_todos = tk.Button(ventana_actual, text="Borrar Todo", command= lambda: limpiar_matriz_constructor())
+    borrar_todos.place(relx=0.0, rely=0.8)
+    
+    #Label que nos calcula los puntos del nivel 
+    label_puntos_creador = tk.Label(ventana_actual, text="Aqui veras los puntos del mapa!")
+    label_puntos_creador.place(relx =0.0, rely=0.9)
+
+    #Entries para cambiar la vida y casillas
+    entry_cambiar_vida = tk.Entry(ventana_actual)
+    entry_cambiar_vida.config(font=("Arial, 14"), justify="center")
+    entry_cambiar_vida.place(relx =0.5, rely = 0.9)
+    entry_cambiar_vida.insert(0,"Cantidad de vidas (num entero)!")
+    boton_cambiar_vida = tk.Button(ventana_actual, text="Vidas")
+
+    entry_cambiar_vida.place(relx=0.5, rely=0.85)
+    boton_cambiar_vida.place(relx=0.5, rely=0.92)
+
+    entry_cambiar_energia = tk.Entry(ventana_actual)
+    entry_cambiar_energia.config(font=("Arial, 14"), justify="center")
+    entry_cambiar_energia.insert(0,"Define la energia (num entero)!")
+
+    boton_cambiar_energia = tk.Button(ventana_actual, text= "Energia")
+    
+    entry_cambiar_energia.place(relx=0.7, rely=0.85)
+    boton_cambiar_energia.place(relx=0.7, rely=0.92)
+
+    #Boton para empezar a jugar!!
+    empezar_a_jugar = tk.Button(ventana_actual, text="Empezar a Jugar!!", command=lambda: jugar_el_nivel())
+    empezar_a_jugar.place(relx= 0.3, rely=0.9)
+
+    ventana_actual.bind("<KeyPress>", mover_constructor)
+    dibujar_mapa_constructor()
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
+
+#Se ocupa definir un nuevo dibujo de mapas y nuevo movimiento
+"""
+
+▒█▀▀█ █▀▀█ █▀▀▄ ▀█░█▀ █▀▀█ █▀▀ ░░ █▀▀ █▀▀█ █▀▀▄ █▀▀ ▀▀█▀▀ █▀▀█ █░░█ █▀▀ ▀▀█▀▀ █▀▀█ █▀▀█ 
+▒█░░░ █▄▄█ █░░█ ░█▄█░ █▄▄█ ▀▀█ ▀▀ █░░ █░░█ █░░█ ▀▀█ ░░█░░ █▄▄▀ █░░█ █░░ ░░█░░ █░░█ █▄▄▀ 
+▒█▄▄█ ▀░░▀ ▀░░▀ ░░▀░░ ▀░░▀ ▀▀▀ ░░ ▀▀▀ ▀▀▀▀ ▀░░▀ ▀▀▀ ░░▀░░ ▀░▀▀ ░▀▀▀ ▀▀▀ ░░▀░░ ▀▀▀▀ ▀░▀▀
+"""
+def dibujar_mapa_constructor():
+        canvas.delete("all")
+        #recorremos la matriz para pinta cada 0,1,2 o 3
+        for fila in range(len(matriz_constructor)):
+                for col in range (len(matriz_constructor[fila])):
+                        x1 = col * TAM          #0
+                        y1 = fila * TAM         #0
+                        x2 = x1 + TAM           #40
+                        y2 = y1 + TAM           #40
+
+                        #obtenemos el valor de la celda 0,1,2,3
+                        valor = matriz_constructor[fila][col]
+
+                        color = "white"
+                        if valor == 1:   # bloque por donde camina
+                                color = "gray"
+                        elif valor == 2: #escalera
+                                color = "brown"
+                        elif valor == 3: #bloque
+                                color = "red"
+                        elif valor == 5:
+                                 color = "yellow"
+                        #dibujamos el cuadrado de cada celda 
+                        canvas.create_rectangle(x1,y1,x2,y2, fill=color, outline = "black")
+                    
+                        if valor == 2:
+                            canvas.create_text(
+                                x1 + TAM/2,
+                                y1 + TAM/2,
+                                text = "H",
+                                fill = "yellow", 
+                                font = ("Arial", 16, "bold")
+                            )
+                        if valor == 4: #Dibujar enemigo
+                              x1 = col * TAM + 7
+                              y1 = fila * TAM + 7
+                              x2 = x1 + TAM - 15
+                              y2 = y1 + TAM - 15
+                              canvas.create_oval(x1,y1,x2,y2, fill="black")
+                        
+                        if valor == 6:
+                             x1 = col * TAM + 5
+                             y1 = fila * TAM + 5
+                             x2 = x1 + TAM - 10
+                             y2 = y1 + TAM - 10
+                             canvas.create_oval(x1, y1, x2, y2, fill="Cyan", outline = "black")
+                             canvas.create_text(
+                                    col * TAM + TAM/2,
+                                    fila * TAM + TAM/2,
+                                    text = "I",
+                                    fill = "White",
+                                    font = ("Arial", 16, "bold")
+                                    )
+        dibujar_constructor()
+
+def dibujar_constructor():
+        x1 = constructor_col * TAM + 5
+        y1 = constructor_fila * TAM + 5
+        x2 = x1 + TAM - 10
+        y2 = y1 + TAM - 10
+
+        canvas.create_oval(x1,y1,x2,y2, fill="orange", outline = "black")
+        canvas.create_text(
+                constructor_col * TAM + TAM/2,
+                constructor_fila * TAM + TAM/2,
+                text = "C",
+                fill = "white",
+                font = ("Arial", 16, "bold")
+        )
+
+
+"""
+█▀▀█ █▀▀█ █▀▀▄ █▀▀ █▀▀█ ░░ █▀▀█ █░░█ ░▀░ ▀▀█▀▀ █▀▀█ █▀▀█ ░░ █▀▀▄ █░░ █▀▀█ █▀▀█ █░░█ █▀▀ █▀▀ 
+█░░█ █░░█ █░░█ █▀▀ █▄▄▀ ▀▀ █░░█ █░░█ ▀█▀ ░░█░░ █▄▄█ █▄▄▀ ▀▀ █▀▀▄ █░░ █░░█ █░░█ █░░█ █▀▀ ▀▀█ 
+█▀▀▀ ▀▀▀▀ ▀░░▀ ▀▀▀ ▀░▀▀ ░░ ▀▀▀█ ░▀▀▀ ▀▀▀ ░░▀░░ ▀░░▀ ▀░▀▀ ░░ ▀▀▀░ ▀▀▀ ▀▀▀▀ ▀▀▀█ ░▀▀▀ ▀▀▀ ▀▀▀
+"""
+
+def cambiar_bloque(id): #Le ponemos un ID que sera el bloque que queremos construir.
+    global canvas, matriz_constructor, constructor_col, constructor_fila, puntos_constructor, label_puntos_creador
+    if id == 6:
+        if hay_punto_de_inicio(): #Evitar que se repitan
+            eliminar_punto_de_inicio()
+            poner_punto_de_inicio()
+        else:
+            poner_punto_de_inicio()
+
+    else :
+        matriz_constructor[constructor_fila][constructor_col] = id 
+        if id == 1 or id == 2:
+            puntos_constructor -= 2
+        elif id == 3:
+            puntos_constructor += 20
+        elif id == 4:
+            puntos_constructor += 50
+    
+    label_puntos_creador.config(text=f"Puntos Minimos : {puntos_constructor}")
+
+    dibujar_mapa_constructor()
+
+def hay_punto_de_inicio(): #Ver si ya hay punto de inicio
+    for i in range(len(matriz_constructor)):
+        for j in range(len(matriz_constructor[0])):
+            if matriz_constructor[i][j] == 6:
+                return True
+    return False
+
+def eliminar_punto_de_inicio(): 
+    global matriz_constructor
+    for i in range(len(matriz_constructor)):
+            for j in range(len(matriz_constructor[0])):
+                if matriz_constructor[i][j] == 6:
+                    matriz_constructor[i][j] = 0
+                    return #Terminar el ciclado!! 
+                    
+def poner_punto_de_inicio():
+    global matriz_constructor, constructor_col, constructor_fila   
+    matriz_constructor[constructor_fila][constructor_col] = 6
+
+def limpiar_matriz_constructor():
+    global matriz_constructor, label_puntos_creador, puntos_constructor
+    for i in range(len(matriz_constructor)):
+        for j in range(len(matriz_constructor[0])):
+            matriz_constructor[i][j] = 0
+    puntos_constructor = 0 #Reseteamos los puntos
+    label_puntos_creador.config(text="Has limpiado el nivel!") #Indicarle al jugador la accion que acaba de realizar
+    dibujar_mapa_constructor()
+
+
+"""
+Configurar Vidas y Casillas
+"""
+
+def config_vida():
+    global entry_cambiar_vida #Esto nos sirve para hacer get
+
+
+"""
+▒█▀▀█ █▀▀█ █▀▀▄ █▀▀ ▀▀█▀▀ █▀▀█ █░░█ █▀▀ ▀▀█▀▀ █▀▀█ █▀▀█ ░░ █▀▄▀█ █▀▀█ ▀█░█▀ █▀▀ █▀▀█ 
+▒█░░░ █░░█ █░░█ ▀▀█ ░░█░░ █▄▄▀ █░░█ █░░ ░░█░░ █░░█ █▄▄▀ ▀▀ █░▀░█ █░░█ ░█▄█░ █▀▀ █▄▄▀ 
+▒█▄▄█ ▀▀▀▀ ▀░░▀ ▀▀▀ ░░▀░░ ▀░▀▀ ░▀▀▀ ▀▀▀ ░░▀░░ ▀▀▀▀ ▀░▀▀ ░░ ▀░░░▀ ▀▀▀▀ ░░▀░░ ▀▀▀ ▀░▀▀
+"""
+
+
+def mover_constructor (event):
+        global constructor_fila, constructor_col   #indicarle al def que use las variables globales
+        nueva_fila = constructor_fila
+        nueva_col =  constructor_col
+
+        if event.keysym == "a":
+                nueva_col -= 1
+        elif event.keysym == "d":
+                nueva_col += 1
+        elif event.keysym == "w":
+                nueva_fila -= 1
+        elif event.keysym == "s":
+                nueva_fila += 1
+        else:
+                return
+
+        if puede_moverse_constructor(nueva_fila, nueva_col):
+                constructor_fila = nueva_fila
+                constructor_col =  nueva_col
+        
+        dibujar_mapa_constructor()
+
+def puede_moverse_constructor (fila, col):
+        #si se sale del borde superior o inferior
+        if fila < 0 or fila >= len(matriz_constructor):
+                return False
+        #si se sale de bordes derecho o izquierdo
+        if col < 0 or col >= len(matriz_constructor[0]):
+                return False
+        return True
+
+"""
+
+░░▀ █░░█ █▀▀▀ █▀▀█ █▀▀█ 　 █▀▀ █░░ 　 █▀▀▄ ░▀░ ▀█░█▀ █▀▀ █░░ 
+░░█ █░░█ █░▀█ █▄▄█ █▄▄▀ 　 █▀▀ █░░ 　 █░░█ ▀█▀ ░█▄█░ █▀▀ █░░ 
+█▄█ ░▀▀▀ ▀▀▀▀ ▀░░▀ ▀░▀▀ 　 ▀▀▀ ▀▀▀ 　 ▀░░▀ ▀▀▀ ░░▀░░ ▀▀▀ ▀▀▀
+"""
+
+def hay_objetivo():
+    for i in range(len(matriz_constructor)):
+        for j in range(len(matriz_constructor[0])):
+            if matriz_constructor[i][j] == 5:
+                return True #Solo tiene que haber un objetvio
+    return False
+
+def jugar_el_nivel(): #Tiene que validar que el nivel sea posible 
+    global label_puntos_creador
+    if not hay_objetivo():
+        label_puntos_creador.config(text="No hay objetivo, el nivel NO es jugable :(")
+        return
+    elif not hay_punto_de_inicio():
+        label_puntos_creador.config(text="No hay un punto de inicio, el nivel NO es jugable :(")
+        return 
+    else : 
+        pass 
+
+
+
+#Main window
 boton_inicio_juego = tk.Button(root, text="Iniciar Juego Predeterminado",command= lambda: iniciar_juego_default())
 boton_inicio_juego.pack()
+boton_constructor_mapas = tk.Button(root, text="Iniciar Constructor de Mapas", command= lambda:iniciar_creador_de_mapas())
+boton_constructor_mapas.pack()
+boton_high_scores = tk.Button(root, text="HighScores",command=lambda: show_highscores())
+boton_high_scores.pack()
+
+root.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 
 #Main loop
 root.mainloop()
