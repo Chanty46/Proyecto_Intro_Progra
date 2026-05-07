@@ -4,6 +4,8 @@ from tkinter import ttk
 import time 
 import variables 
 import pygame
+import PIL
+from PIL import Image, ImageTk 
 from variables import * #Importamos todo 
 
 pygame.mixer.init()
@@ -30,6 +32,20 @@ def leer_archivo_highscores():
         pass #Significa que no hay un archivo
 
 leer_archivo_highscores()
+def cargar_imagenes():
+    global img_bloque, img_escalera, img_obstaculo, img_enemigo, img_pescado, img_fondo_derrota, img_gato_der, img_gato_izq, img_fondo_canvas, img_fondo_juego, img_fondo_main, img_fondo_victoria
+    img_bloque = ImageTk.PhotoImage(Image.open("Assets/Sprites/bloque.png"))
+    img_escalera = ImageTk.PhotoImage(Image.open("Assets/Sprites/escalera.png"))
+    img_obstaculo = ImageTk.PhotoImage(Image.open("Assets/Sprites/obstaculo.png"))
+    img_enemigo = ImageTk.PhotoImage(Image.open("Assets/Sprites/enemigo.png"))
+    img_pescado = ImageTk.PhotoImage(Image.open("Assets/Sprites/pescado.png"))
+    img_gato_der = ImageTk.PhotoImage(Image.open("Assets/Sprites/GatoDer.png"))
+    img_gato_izq = ImageTk.PhotoImage(Image.open("Assets/Sprites/GatoIzq.png"))
+    img_fondo_canvas = ImageTk.PhotoImage(Image.open("Assets/Sprites/fondo_canvas.png"))
+    img_fondo_juego = ImageTk.PhotoImage(Image.open("Assets/Sprites/fondo_juego.png"))
+    img_fondo_main = ImageTk.PhotoImage(Image.open("Assets/Sprites/fondo_main.png"))
+    img_fondo_victoria = ImageTk.PhotoImage(Image.open("Assets/Sprites/fondo_ganaste.png"))
+    img_fondo_derrota = ImageTk.PhotoImage(Image.open("Assets/Sprites/fondo_derrota.png"))
 
 # Se define root
 root = tk.Tk() 
@@ -38,6 +54,10 @@ root.geometry("600x800")
 root.resizable(False,False)
 root.grab_set()
 root.focus()
+cargar_imagenes()
+
+bg_label_main = tk.Label(root, image=img_fondo_main)
+bg_label_main.place(x= 0, y=0)
 
 """
 
@@ -61,39 +81,26 @@ root.focus()
 """
 #_ Dibujar mapa
 def dibujar_mapa():
-    global objetos_a_recolectar, player_hp_label, player_puntos_label, player_objetivos_label, player_casillas_restantes_label
-    canvas.delete("all") # reiniciar el mapa
+    global objetos_a_recolectar, player_hp_label, player_puntos_label, player_objetivos_label, player_casillas_restantes_label 
+    canvas.delete("all")
+    canvas.create_image(0, 0, image=img_fondo_canvas, anchor=tk.NW)
     for i in range(len(matriz)):
         for j in range(len(matriz[i])):
             x1 = j * TAM
-            y1 = i* TAM
-            x2 = x1 + TAM #Se hace pixeles hacia otro el otro lado
-            y2 = y1 + TAM #Se hace cuarenta pixeles hacia un lado
-
-            #Obtenemos el valor de la celda
+            y1 = i * TAM
             valor = matriz[i][j]
-            color = "white" # Hacer un bitmap con imagenes para ponerle "Texturas"
-            if valor == 1: #Se trata de bloque
-                color = "grey"
-            elif valor == 2: #Escalera
-                color = "brown"
-            elif valor == 3: #Bloque 
-                color = "red"
+
+            if valor == 1:
+                canvas.create_image(x1, y1, anchor="nw", image=img_bloque)
+            elif valor == 2:
+                canvas.create_image(x1, y1, anchor="nw", image=img_escalera)
+            elif valor == 3:
+                canvas.create_image(x1, y1, anchor="nw", image=img_obstaculo)
+            elif valor == 4:
+                canvas.create_image(x1, y1, anchor="nw", image=img_enemigo)
             elif valor == 5:
-                color = "yellow"
-                
+                canvas.create_image(x1, y1, anchor="nw", image=img_pescado)
 
-            # Dibujamos el cuadrado de cada celda
-            canvas.create_rectangle(x1,y1,x2,y2, fill=color, outline="black") #Borde negro de la matriz ELIMINAR al terminar
-
-            if valor == 2:
-                canvas.create_text(
-                    x1 + TAM/2,
-                    y1 + TAM/2,
-                    text = "H",
-                    fill = "yellow", 
-                    font = ("Arial", 16, "bold")
-                )
     dibujar_player() #Dibuja al player de una vez
     dibujar_enemigos()
 
@@ -105,19 +112,14 @@ def dibujar_mapa():
 
 #Dibujar al jugador
 def dibujar_player():
-    global letra
-    x1 = player_col * TAM + 5
-    y1 = player_fila * TAM + 5
-    x2 = x1 + TAM - 10
-    y2 = y1 + TAM - 10
-    canvas.create_oval(x1, y1, x2, y2, fill="Cyan", outline = "black")
-    canvas.create_text(
-        player_col * TAM + TAM/2,
-        player_fila * TAM + TAM/2,
-        text = letra,
-        fill = "White",
-        font = ("Arial", 16, "bold")
-        )
+    global letra, facing_right, img_gato_izq, img_gato_der
+    x1 = player_col * TAM 
+    y1 = player_fila * TAM 
+    if facing_right:
+        img = img_gato_der
+    else:
+        img = img_gato_izq
+    canvas.create_image(x1, y1, anchor="nw", image=img)
 
 """
 
@@ -139,17 +141,13 @@ def encontrar_enemigos():
 
 #Luego los dibujamos // Por el momento seran dibujos
 def dibujar_enemigos():
-    global filas_balas_canon, cols_balas_canon 
+    global filas_balas_canon, cols_balas_canon, img_enemigo
     for i in range(len(filas_balas_canon)): #ambas tendran el mismo largo  
-        x1 = cols_balas_canon[i] * TAM + 7
-        y1 = filas_balas_canon[i] * TAM + 7
-        x2 = x1 + TAM - 15
-        y2 = y1 + TAM - 15
-        canvas.create_oval(x1, y1, x2, y2, fill="black", outline = "black")
-        canvas.create_text(
-        x1 * TAM + TAM/2,
-        y1 * TAM + TAM/2,
-        )
+        x1 = cols_balas_canon[i] * TAM 
+        y1 = filas_balas_canon[i] * TAM 
+        canvas.create_image(x1, y1, anchor="nw", image=img_enemigo)
+
+
 def mover_balas_canon():
     global filas_balas_canon, cols_balas_canon 
 
@@ -258,7 +256,8 @@ def mover(event):
         if puede_moverse(nueva_fila, nueva_col): #Como si se puede mover, se cambian los valores de las filas y cols
             player_fila = nueva_fila
             player_col = nueva_col
-            player_casillas_restantes -= 1
+            if event.keysym != "space":
+                player_casillas_restantes -= 1
         comprobacion_ganar_perder() #Al moverse, comprobar si perdimos o ganamos ok
 
     dibujar_mapa() #dibujamos el mapa por cada movimiento que haga nuestro jugador
@@ -368,6 +367,7 @@ def puede_moverse(fila, col):
         return False
     if matriz[fila][col] ==1:
         return False
+        
     return True
 
 #Verificacion de escaleras
@@ -386,7 +386,7 @@ def esta_en_escalera(player_fila, player_col):
 
 def esta_en_aire(fila, col):
     try : #Use un try para evitar un outofbounds error
-        if matriz[fila + 1 ][col] == 0 or matriz[fila +1][col] == 3: 
+        if matriz[fila + 1 ][col] == 0 or matriz[fila +1][col] == 3 or matriz[fila +1][col] == 6 or matriz[fila +1][col] == 5: 
                 return True
         else :
             return False #Si es diferente a 0, pues no esta en el aire
@@ -490,7 +490,6 @@ def hay_colision_objetivo():
 
 def comprobacion_ganar_perder():
     global player_hp, objetos_a_recolectar , paused_game, player_casillas_restantes, player_puntos_finales, player_puntos
-    puntos_finales = 0
     eliminar_enemigo()
     if hay_colision_enemigos():
         player_hp -= 1 # Si tenemos una colision, perdemos puntos
@@ -502,7 +501,7 @@ def comprobacion_ganar_perder():
             paused_game = True
             reset_game()
             
-    elif player_casillas_restantes == 0:
+    elif player_casillas_restantes <= 0:
         if objetos_a_recolectar == 0: #Que nos quedamos sin energia pero llegamos a la meta
             reset_game() # por si quiere volver a intentarlo
             ventana_actual.after(1, victoria)
@@ -540,33 +539,36 @@ def victoria():
     ventana_actual.title("Victoria -- GatoAventuras")
     ventana_actual.geometry("600x800")
 
+    #Bg 
+    bg_label = tk.Label(ventana_actual, image=img_fondo_victoria)
+    bg_label.place(x=0, y=0)
     #Widgets 
-    ganaste_label = tk.Label(ventana_actual, text="Ganaste : )")
-    ganaste_label.pack()
-    ganaste_boton = tk.Button(ventana_actual, text="regresar a menu", command=lambda: finalizar_juego())
-    ganaste_boton.pack()
+    if mapa_actual == "Predeterminado":
+        ganaste_boton = tk.Button(ventana_actual, text="Regresar al Menú Principal", command=lambda: finalizar_juego())
+        ganaste_boton.place(relx = 0.5, rely = 0.535,anchor="center")
+
     reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:reintentar())
-    reintentar_default_boton.pack()
+    reintentar_default_boton.place(relx = 0.5, rely = 0.57,anchor="center")
     ganaste_puntos_label = tk.Label(ventana_actual, text=f"Puntos Obtenidos: {player_puntos_finales}")
-    ganaste_puntos_label.pack()
-    mapa_actual_label = tk.Label(ventana_actual, text=f"Mapa Jugado {mapa_actual}")
-    mapa_actual_label.pack()
+    ganaste_puntos_label.place(relx=0.5, rely=0.7, anchor="center")
+    mapa_actual_label = tk.Label(ventana_actual, text=f"Has ganado en el mapa: {mapa_actual}")
+    mapa_actual_label.place(relx= 0.5, rely= 0.65, anchor="center")
     boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
-    boton_musica.place(relx=0.0, rely=0.0)
+    boton_musica.place(relx=0.5, rely=0.9, anchor="center")
 
     if verificar_top5(): #Si el puntaje actual es posible highscore, todo bien
         escribir_high_score = tk.Button(ventana_actual, text="¿Guardar HighScore?", command=lambda: pantalla_escritura_highscore())
-        escribir_high_score.pack()
+        escribir_high_score.place(relx = 0.5, rely= 0.2, anchor="center")
   
     if mapa_actual == "Constructor":
         volver_constructor_boton = tk.Button(ventana_actual, text="Volver al Constructor", command=lambda: volver_al_constructor())
-        volver_constructor_boton.pack()
+        volver_constructor_boton.place(relx = 0.5, rely = 0.538,anchor="center")
         guardar_1 = tk.Button(ventana_actual, text="Guardar en Slot 1", command=lambda: guardar_nivel(1))
-        guardar_1.pack()
+        guardar_1.place(relx= 0.25, rely= 0.78, anchor="center")
         guardar_2 = tk.Button(ventana_actual, text="Guardar en Slot 2", command=lambda: guardar_nivel(2))
-        guardar_2.pack()
+        guardar_2.place(relx= 0.5, rely =0.78, anchor="center")
         guardar_3 = tk.Button(ventana_actual, text="Guardar en Slot 3", command=lambda: guardar_nivel(3))
-        guardar_3.pack()
+        guardar_3.place(relx= 0.75, rely =0.78, anchor="center")
     
     ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 
@@ -584,25 +586,28 @@ def perdiste():
     ventana_actual.title("GameOver -- GatoAventuras")
     ventana_actual.geometry("600x800")
 
+    #Bg
+    bg_label = tk.Label(ventana_actual, image=img_fondo_derrota)
+    bg_label.place(x=0, y=0)
+
     #Widgets
     pygame.mixer.music.load(canciones[4])
     pygame.mixer.music.play(-1)
-    perdiste_label = tk.Label(ventana_actual, text="Perdiste : (")
-    perdiste_label.pack()
-    perdiste_boton = tk.Button(ventana_actual, text="regresar a menu", command=lambda: finalizar_juego())
-    perdiste_boton.pack()
+    if mapa_actual == "Predeterminado":
+        perdiste_boton = tk.Button(ventana_actual, text="Regresar al Menú Principal", command=lambda: finalizar_juego())
+        perdiste_boton.place(relx = 0.5, rely = 0.53,anchor="center")
     reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:reintentar())
-    reintentar_default_boton.pack()
+    reintentar_default_boton.place(relx=0.5 , rely=0.7, anchor="center")
     perdiste_puntos_label = tk.Label(ventana_actual, text="No obtuviste ningun punto")
-    perdiste_puntos_label.pack()
-    mapa_actual_label = tk.Label(ventana_actual, text=f"Mapa Jugado {mapa_actual}")
-    mapa_actual_label.pack()
+    perdiste_puntos_label.place(relx=0.5, rely=0.65, anchor="center")
+    mapa_actual_label = tk.Label(ventana_actual, text=f"Has perdido en el mapa : {mapa_actual}")
+    mapa_actual_label.place(relx= 0.5, rely= 0.6, anchor="center")
     ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
     boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
-    boton_musica.place(relx=0.0, rely=0.0)
+    boton_musica.place(relx=0.5, rely=0.8, anchor="center")
     if mapa_actual == "Constructor":
         volver_constructor_boton = tk.Button(ventana_actual, text="Volver al Constructor", command=lambda: volver_al_constructor())
-        volver_constructor_boton.pack()
+        volver_constructor_boton.place(relx = 0.5, rely = 0.55,anchor="center")
 
 """
 Fundamental :
@@ -644,7 +649,7 @@ def pantalla_escritura_highscore():
 
     #Config de la ventana : 
     ventana_actual.title("Guardar_HighScore -- GatoAventuras")
-    ventana_actual.geometry("600x800")
+    ventana_actual.geometry("600x200")
 
 
     #Widgets 
@@ -805,7 +810,7 @@ def finalizar_juego(): #salirnos del Juego
     player_casillas_restantes = 90
     objetos_a_recolectar = 0
     if mapa_actual == "Constructor":
-        limpiar_matriz_constructor()
+            limpiar_matriz_constructor()
     ventana_actual.destroy()
 
 """
@@ -817,7 +822,7 @@ def finalizar_juego(): #salirnos del Juego
 def iniciar_juego_default():
     pygame.mixer.music.load(canciones[1])
     pygame.mixer.music.play(-1)
-    global filas_balas_canon, cols_balas_canon, direccion_balas_canon, inicio_col, inicio_fila, casillas_reset, mapa_actual, player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
+    global objetos_a_recolectar, filas_balas_canon, cols_balas_canon, direccion_balas_canon, inicio_col, inicio_fila, casillas_reset, mapa_actual, player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
     #Primero creamos un TopLevel
     global canvas, default_game 
     global ventana_actual
@@ -829,7 +834,9 @@ def iniciar_juego_default():
     ventana_actual.grab_set()
     ventana_actual.focus()
     juego_activo = True
-    
+    #Bg Label 
+    bg_label = tk.Label(ventana_actual, image=img_fondo_juego)
+    bg_label.place(x=0,y=0)
     #Empezar cambiando la matriz a usar
     matriz = copy.deepcopy(matriz_default)
     matriz_original = copy.deepcopy(matriz_original_default)
@@ -843,6 +850,7 @@ def iniciar_juego_default():
     player_hp = 3
     player_casillas_restantes = 90
     casillas_reset = 90
+    objetos_a_recolectar = 0 # Evitar bugs al reentrar a la ventana
     mapa_actual = "Predeterminado" #Esto nos servira para la escritura de highscores
 
     #Hacemos que la ventana actual sea la que se esta usando para poder tener la logica para el constructor de mapas
@@ -852,9 +860,9 @@ def iniciar_juego_default():
     ventana_actual, 
     width=len(matriz[0]) * TAM, #Se hace el canvas en base al tamaño de la matriz
     height=len(matriz) * TAM, 
-    bg = "White"
     )
     canvas.place(relx= 0.03, anchor="nw")
+
     
     #Key Binds del game
     ventana_actual.bind("<KeyPress>", presionar_tecla)
@@ -871,11 +879,11 @@ def iniciar_juego_default():
     calculo_puntos_base()
 
     boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
-    boton_musica.place(relx=0.0, rely=0.0)
+    boton_musica.place(relx=0.35, rely=0.95)
     
     # Crear botones y elementos
     fin_juego = tk.Button(ventana_actual, text="Salir a menú principal", command= lambda: finalizar_juego())
-    fin_juego.place(anchor="nw", rely= 0)
+    fin_juego.place(relx=0.45, rely=0.95)
 
     #Creamos labels para mostrar la informacion 
     player_hp_label = tk.Label(ventana_actual, text=f"Vidas : {player_hp}", relief="groove")
@@ -891,6 +899,7 @@ def iniciar_juego_default():
     player_objetivos_label.place(relx = 0.7, rely= 0.9)
 
     ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
+
 
     #Llamar al loop del juego
     dibujar_mapa()
@@ -926,35 +935,39 @@ def iniciar_creador_de_mapas():
     ventana_actual.grab_set()
     ventana_actual.focus()
     mapa_actual = "Constructor"
+    
+    #Bg Label 
+    bg_label = tk.Label(ventana_actual, image=img_fondo_juego)
+    bg_label.place(x=-10,y=0)
+
     #Creamos el Canvas
     canvas = tk.Canvas(
     ventana_actual, 
     width=len(matriz_constructor[0]) * TAM, #Se hace el canvas en base al tamaño de la matriz
-    height=len(matriz_constructor) * TAM, 
-    bg = "White"
+    height=len(matriz_constructor) * TAM 
     )
     canvas.place(relx= 0.05, anchor="nw")
 
     #Luego de esto creamos los botones para cambiar las posiciones!!!
     poner_vacio = tk.Button(ventana_actual, text="Vacio", command=lambda: cambiar_bloque(0))
     poner_vacio.place(relx=0.0, rely=0.1)
-    poner_bloque = tk.Button(ventana_actual, text="Bloque", command=lambda: cambiar_bloque(1))
+    poner_bloque = tk.Button(ventana_actual, image=img_bloque, command=lambda: cambiar_bloque(1))
     poner_bloque.place(relx=0.0, rely=0.2)
-    poner_escalera = tk.Button(ventana_actual, text="Escalera", command=lambda: cambiar_bloque(2))
+    poner_escalera = tk.Button(ventana_actual, image=img_escalera, command=lambda: cambiar_bloque(2))
     poner_escalera.place(relx=0.0, rely=0.3)
-    poner_trampa = tk.Button(ventana_actual, text="Trampa", command=lambda: cambiar_bloque(3))
+    poner_trampa = tk.Button(ventana_actual, image=img_obstaculo, command=lambda: cambiar_bloque(3))
     poner_trampa.place(relx=0.0, rely=0.4)
-    poner_enemigo = tk.Button(ventana_actual, text="Enemigo", command=lambda: cambiar_bloque(4))
+    poner_enemigo = tk.Button(ventana_actual, image=img_enemigo, command=lambda: cambiar_bloque(4))
     poner_enemigo.place(relx=0.0, rely=0.5)
-    poner_objetivo = tk.Button(ventana_actual, text="Objetivo", command=lambda: cambiar_bloque(5))
+    poner_objetivo = tk.Button(ventana_actual, image=img_pescado, command=lambda: cambiar_bloque(5))
     poner_objetivo.place(relx=0.0, rely=0.6)
-    poner_inicio = tk.Button(ventana_actual, text="Punto de Inicio", command=lambda: cambiar_bloque(6))
+    poner_inicio = tk.Button(ventana_actual, text="Punto Inicio", command=lambda: cambiar_bloque(6))
     poner_inicio.place(relx=0.0, rely=0.7)
     borrar_todos = tk.Button(ventana_actual, text="Borrar Todo", command= lambda: limpiar_matriz_constructor())
     borrar_todos.place(relx=0.0, rely=0.8)
     
     boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
-    boton_musica.place(relx=0.0, rely=0.0)
+    boton_musica.place(relx=0.28, rely=0.9)
     
     #Label que nos calcula los puntos del nivel 
     label_puntos_creador = tk.Label(ventana_actual, text="Aqui veras los puntos del mapa!")
@@ -967,37 +980,30 @@ def iniciar_creador_de_mapas():
     entry_cambiar_vida.insert(0,f"Define Vidas, Actuales {vidas_constructor}")
     boton_cambiar_vida = tk.Button(ventana_actual, text="Vidas", command=lambda: config_vida())
 
-    entry_cambiar_vida.place(relx=0.5, rely=0.85)
-    boton_cambiar_vida.place(relx=0.5, rely=0.92)
+    boton_cambiar_vida.place(relx=0.47, rely=0.9)
 
     entry_cambiar_energia = tk.Entry(ventana_actual)
     entry_cambiar_energia.config(font=("Arial, 14"), justify="center")
     entry_cambiar_energia.insert(0,f"Define Energia, Actual {casillas_restantes_constructor}")
-
     boton_cambiar_energia = tk.Button(ventana_actual, text= "Energia", command=lambda: config_energia())
-    
-    entry_cambiar_energia.place(relx=0.7, rely=0.85)
-    boton_cambiar_energia.place(relx=0.7, rely=0.92)
+    entry_cambiar_energia.place(relx=0.7, rely=0.9)
+    boton_cambiar_energia.place(relx=0.66, rely=0.9)
 
     #Boton para empezar a jugar!!
     empezar_a_jugar = tk.Button(ventana_actual, text="Empezar a Jugar!!", command=lambda: jugar_el_nivel())
-    empezar_a_jugar.place(relx= 0.3, rely=0.9)
-
-     #Boton para borrar todo
-    borrar_todo = tk.Button(ventana_actual, text="Borrar Todo", command=lambda:[limpiar_matriz_constructor(), label_puntos_creador.config(text="Has limpiado el nivel!")])
-    borrar_todo.place(relx = 0.2, rely =0.9)
+    empezar_a_jugar.place(relx= 0.14, rely=0.9)
 
     #Cargar mapas
     cargar_1 = tk.Button(ventana_actual, text="Cargar Slot 1", command=lambda: cargar_nivel(1))
-    cargar_1.pack()
+    cargar_1.place(relx=0.07,rely=0.95, anchor="center")
     cargar_2 = tk.Button(ventana_actual, text="Cargar Slot 2", command=lambda: cargar_nivel(2))
-    cargar_2.pack()
+    cargar_2.place(relx=0.14,rely=0.95, anchor="center")
     cargar_3 = tk.Button(ventana_actual, text="Cargar Slot 3", command=lambda: cargar_nivel(3))
-    cargar_3.pack()
+    cargar_3.place(relx=0.21,rely=0.95, anchor="center")
 
     #Boton salir del constructor :(
     salir_constructor_boton = tk.Button(ventana_actual, text="Salir sin guardar", command=lambda: salir_constructor())
-    salir_constructor_boton.place(relx =0.4, rely=0.9)
+    salir_constructor_boton.place(relx =0.21, rely=0.9)
     ventana_actual.bind("<KeyPress>", mover_constructor)
     dibujar_mapa_constructor()
     ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
@@ -1012,6 +1018,7 @@ def iniciar_creador_de_mapas():
 def dibujar_mapa_constructor():
         global puntos_constructor, label_puntos_creador
         canvas.delete("all")
+        canvas.create_image(0, 0, image=img_fondo_canvas, anchor=tk.NW)
         #recorremos la matriz para pinta cada 0,1,2 o 3
         for fila in range(len(matriz_constructor)):
                 for col in range (len(matriz_constructor[fila])):
@@ -1021,35 +1028,23 @@ def dibujar_mapa_constructor():
                         y2 = y1 + TAM           #40
 
                         #obtenemos el valor de la celda 0,1,2,3
-                        valor = matriz_constructor[fila][col]
-
-                        color = "white"
-                        if valor == 1:   # bloque por donde camina
-                                color = "gray"
-                        elif valor == 2: #escalera
-                                color = "brown"
-                        elif valor == 3: #bloque
-                                color = "red"
-                        elif valor == 5:
-                                 color = "yellow"
-                        #dibujamos el cuadrado de cada celda 
-                        canvas.create_rectangle(x1,y1,x2,y2, fill=color, outline = "black")
-                    
-                        if valor == 2:
-                            canvas.create_text(
-                                x1 + TAM/2,
-                                y1 + TAM/2,
-                                text = "H",
-                                fill = "yellow", 
-                                font = ("Arial", 16, "bold")
-                            )
-                        if valor == 4: #Dibujar enemigo
-                              x1 = col * TAM + 7
-                              y1 = fila * TAM + 7
-                              x2 = x1 + TAM - 15
-                              y2 = y1 + TAM - 15
-                              canvas.create_oval(x1,y1,x2,y2, fill="black")
                         
+                        valor = matriz_constructor[fila][col]
+                        color = ""
+                        
+                        if valor == 0:
+                            canvas.create_rectangle(x1,y1,x2,y2, fill=color, outline = "black")
+                        elif valor == 1:   # bloque por donde camina
+                                canvas.create_image(x1, y1, anchor="nw", image=img_bloque)
+                        elif valor == 2: #escalera
+                                canvas.create_image(x1, y1, anchor="nw", image=img_escalera)
+                        elif valor == 3: #bloque
+                                canvas.create_image(x1, y1, anchor="nw", image=img_obstaculo)
+                        elif valor == 4:
+                                canvas.create_image(x1, y1, anchor="nw", image=img_enemigo)
+                        elif valor == 5:
+                                  canvas.create_image(x1, y1, anchor="nw", image=img_pescado)
+                    
                         if valor == 6:
                              x1 = col * TAM + 5
                              y1 = fila * TAM + 5
@@ -1147,7 +1142,6 @@ def config_vida():
         vidas_constructor = int(entry_cambiar_vida.get())
         if vidas_constructor > 0:
             label_puntos_creador.config(text =f"Haz cambiado las vidas a {vidas_constructor}")
-            print(vidas_constructor)
         else :
             vidas_constructor = 3
             label_puntos_creador.config(text =f"Valor no válido en vidas, cambiadas a {vidas_constructor}")
@@ -1161,13 +1155,12 @@ def config_energia():
         casillas_restantes_constructor = int(entry_cambiar_energia.get())
         if casillas_restantes_constructor > 0:
             label_puntos_creador.config(text =f"Haz cambiado la energia a {casillas_restantes_constructor}, los puntos")
-            print(casillas_restantes_constructor)
         else:
             casillas_restantes_constructor = 90
             label_puntos_creador.config(text =f"Valor no válido en energia, cambiada a {casillas_restantes_constructor}")
     except :
         casillas_restantes_constructor = 90
-        label_puntos_creador.config(text =f"Valor no válido en energia, cambiada a {vidas_constructor}")
+        label_puntos_creador.config(text =f"Valor no válido en energia, cambiada a {casillas_restantes_constructor}")
         
 
 """
@@ -1315,12 +1308,9 @@ def iniciar_juego_constructor():
     pygame.mixer.music.load(canciones[1])
     pygame.mixer.music.play(-1)
     global objetos_a_recolectar, filas_balas_canon, cols_balas_canon,direccion_balas_canon,player_hp, inicio_fila, inicio_col, player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
-    print("matriz_original[0]:", matriz_original[0])
-    print("matriz[0]:", matriz[0])
-   
-    #Primero creamos un TopLevel
     global canvas, constructor_game
     global ventana_actual
+    #Primero creamos un TopLevel
     constructor_game = tk.Toplevel()
     ventana_actual = constructor_game 
     ventana_actual.title("Juego_Constructor")
@@ -1329,6 +1319,10 @@ def iniciar_juego_constructor():
     ventana_actual.grab_set()
     ventana_actual.focus()
     juego_activo = True
+
+    #Bg Label 
+    bg_label = tk.Label(ventana_actual, image=img_fondo_juego)
+    bg_label.place(x=-10,y=0)
     
     mapa_actual = "Constructor" #Esto nos servira para la escritura de highscores
 
@@ -1367,7 +1361,7 @@ def iniciar_juego_constructor():
     calculo_puntos_base() 
 
     fin_juego = tk.Button(ventana_actual, text="Salir a menú principal", command= lambda: finalizar_juego())
-    fin_juego.place(anchor="nw", rely= 0)
+    fin_juego.place(relx=0.45, rely=0.95)
 
     #Creamos labels para mostrar la informacion 
     global player_hp_label, player_casillas_restantes_label, player_puntos_label, player_objetivos_label
@@ -1384,7 +1378,7 @@ def iniciar_juego_constructor():
     player_objetivos_label.place(relx = 0.7, rely= 0.9)
 
     boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
-    boton_musica.place(relx=0.0, rely=0.0)
+    boton_musica.place(relx=0.35, rely=0.95)
     #Llamar a game loop!
     game_loop()
 
@@ -1393,13 +1387,15 @@ def iniciar_juego_constructor():
 
 #Main window
 boton_inicio_juego = tk.Button(root, text="Iniciar Juego Predeterminado",command= lambda: iniciar_juego_default())
-boton_inicio_juego.pack()
+boton_inicio_juego.place(relx=0.5, rely=0.55, anchor='center')
 boton_constructor_mapas = tk.Button(root, text="Iniciar Constructor de Mapas", command= lambda:iniciar_creador_de_mapas())
-boton_constructor_mapas.pack()
+boton_constructor_mapas.place(relx=0.5, rely=0.6, anchor='center')
 boton_high_scores = tk.Button(root, text="HighScores",command=lambda: show_highscores())
-boton_high_scores.pack()
+boton_high_scores.place(relx=0.5, rely=0.65, anchor='center')
 boton_musica = tk.Button(root, text="Música", command=lambda: toggle_musica())
-boton_musica.place(relx=0.0, rely=0.0)
+boton_musica.place(relx=0.5, rely=0.7, anchor='center')
+boton_salir = tk.Button(root, text="Salir del Juego", command=lambda: root.destroy())
+boton_salir.place(relx= 0.5, rely=0.75, anchor='center')
 
 root.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 

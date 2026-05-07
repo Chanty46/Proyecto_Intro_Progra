@@ -1,4 +1,6 @@
 import copy
+from PIL import Image
+import os
 
 """
 
@@ -32,6 +34,7 @@ matriz_default = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,2,0,0,0,3,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],]
+
 matriz_original_default = copy.deepcopy(matriz_default) #En python si yo pongo a = b, luego b +1, a va a ser igual a b + 1 por como se referencian en la memoria
 matriz_original = []
 
@@ -142,4 +145,8 @@ img_enemigo = None
 img_pescado = None
 img_gato_der = None
 img_gato_izq = None
-
+img_fondo_canvas = None
+img_fondo_juego = None 
+img_fondo_main = None
+img_fondo_victoria = None
+img_fondo_derrota = None
