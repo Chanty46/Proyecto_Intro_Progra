@@ -3,27 +3,41 @@ import copy
 from tkinter import ttk
 import time 
 import variables 
-from variables import *
+import pygame
+from variables import * #Importamos todo 
+
+pygame.mixer.init()
+pygame.mixer.music.load(canciones[0])
+pygame.mixer.music.play(-1)
+
+def toggle_musica():
+    if pygame.mixer.music.get_busy(): #Get Busy return true si esta reproduciendo musica
+        pygame.mixer.music.pause()
+    else:
+        pygame.mixer.music.unpause()
 
 # Acceder a la informacion al abrir el documento
-def leer_archivo():
+def leer_archivo_highscores():
     global saved_highscores, saved_puntos
     try: #Se intenta por si este esta vacio
         file = open("high_scores.txt", "r") #R es read
         for jugador in file:
-            datos = jugador.strip().split("/") #Para cada_jugador, se parte los datos en 3 separados por slash/  y para evitar bugs hacemos strip "Eliminar espacios"
+            datos = jugador.strip().split(",") #Para cada_jugador, se parte los datos en 3 separados por slash/  y para evitar bugs hacemos strip "Eliminar espacios"
             saved_highscores.append(datos)
             saved_puntos.append(int(datos[1]))
         file.close() #Cerrar el archivo es buena practica
     except :
         pass #Significa que no hay un archivo
 
-leer_archivo()
+leer_archivo_highscores()
 
 # Se define root
 root = tk.Tk() 
 root.title("GatoAventuras")
 root.geometry("600x800")
+root.resizable(False,False)
+root.grab_set()
+root.focus()
 
 """
 
@@ -245,6 +259,7 @@ def mover(event):
             player_fila = nueva_fila
             player_col = nueva_col
             player_casillas_restantes -= 1
+        comprobacion_ganar_perder() #Al moverse, comprobar si perdimos o ganamos ok
 
     dibujar_mapa() #dibujamos el mapa por cada movimiento que haga nuestro jugador
 
@@ -443,16 +458,20 @@ def eliminar_enemigo():
 
     for i in range(len(filas_balas_canon)):
         if player_fila + 1 < len(matriz): #Verificar si es una casilla valida, esto evita que el canvas explote  o que tengmaos index out of bounds
-            if not((filas_balas_canon[i] == player_fila +1) and (cols_balas_canon[i] == player_col)) :#Si el player no tiene algo por debajo, mantengalo
+            if not((filas_balas_canon[i] == player_fila +1) and (cols_balas_canon[i] == player_col)):#Si el player no tiene algo por debajo, mantengalo
                 filas_a_mantener.append(filas_balas_canon[i]) #no se elimina el enemigo
                 cols_a_mantener.append(cols_balas_canon[i])
                 direccion_a_mantener.append(direccion_balas_canon[i])
-            else: #Si tiene algo por debajo, eliminelo
+            elif salto_garantizado == 0 and salto_extendido == 0: #Si tiene algo por debajo, eliminelo
                 matriz[player_fila + 1][player_col] = 0
                 is_jumping =True  
                 salto_garantizado = 2 #Pequeño salto al chocar
                 player_casillas_restantes += 10 #Cada enemigo eliminado nos da 10 casillas más
-                player_puntos += 25 #Dar veinticinco puntos cada vez que eliminamos un enemigo
+                player_puntos += 25 #Dar veinticinco puntos cada vez que eliminamos un enemigo\
+            else :
+                filas_a_mantener.append(filas_balas_canon[i]) #no se elimina el enemigo
+                cols_a_mantener.append(cols_balas_canon[i])
+                direccion_a_mantener.append(direccion_balas_canon[i]) #Mantener, estamos subiendo
         else: # Si esta en el piso, entonces no va a agregar nada, meter los enemigos
             filas_a_mantener.append(filas_balas_canon[i])
             cols_a_mantener.append(cols_balas_canon[i])
@@ -476,22 +495,23 @@ def comprobacion_ganar_perder():
     if hay_colision_enemigos():
         player_hp -= 1 # Si tenemos una colision, perdemos puntos
         if player_hp == 0: #Si nos quedamos sin vidas o sin energia :(
-            ventana_actual.after(1, perdiste_default) # Asegurarnos de que game loop no se ejecte mientras cambiamos de ventana
+            ventana_actual.after(1, perdiste) # Asegurarnos de que game loop no se ejecte mientras cambiamos de ventana
             reset_game()
+            return
         else:
             paused_game = True
             reset_game()
             
     elif player_casillas_restantes == 0:
         if objetos_a_recolectar == 0: #Que nos quedamos sin energia pero llegamos a la meta
-            puntos_finales = player_puntos
             reset_game() # por si quiere volver a intentarlo
-            ventana_actual.after(1, victoria_default)
+            ventana_actual.after(1, victoria)
+            return
         else: 
             player_hp -= 1
             reset_game()
             if player_hp == 0:
-                ventana_actual.after(1, perdiste_default) # Asegurarnos de que game loop no se ejecte mientras cambiamos de ventana
+                ventana_actual.after(1, perdiste) # Asegurarnos de que game loop no se ejecte mientras cambiamos de ventana
                 reset_game()
     
         
@@ -501,192 +521,13 @@ def comprobacion_ganar_perder():
         if objetos_a_recolectar == 0:
             player_puntos_finales = player_puntos
             reset_game() # por si quiere volver a intentarlo
-            ventana_actual.after(1, victoria_default)
+            ventana_actual.after(1, victoria)
+            return 
 
-
-"""
-Fundamental :
-Game Loop, actualiza el juego y lo hace funcionar!!
-"""
-def game_loop(): 
-    global gravedad, tick_enemigos, tick_limite, juego_activo
-    if not juego_activo:
-        return #Cortamos game loop
-    ventana_actual.after(gravedad, game_loop)
-    aplicar_salto()
-    aplicar_dash()
-    aplicar_gravedad() #primero activamos la gravedad
-    tick_enemigos += 1
-    if tick_enemigos >= tick_limite: #Basicamente, tiene que actualizarse la gravedad 3 veces para que los enemigos se empiezen a mover, esto lo hize porque son muy rapidos
-        mover_balas_canon()
-        tick_enemigos = 0
-    comprobacion_ganar_perder() #Si se mueven volver a comprobar, para evitar bugs
-    dibujar_mapa() # Dibujar de ultimo, primero refrescar 
-
-"""
-
-███████╗██╗░░░██╗███╗░░██╗░█████╗░██╗░█████╗░███╗░░██╗███████╗░██████╗  ██╗░░██╗
-██╔════╝██║░░░██║████╗░██║██╔══██╗██║██╔══██╗████╗░██║██╔════╝██╔════   ╚██╗██╔╝
-█████╗░░██║░░░██║██╔██╗██║██║░░╚═╝██║██║░░██║██╔██╗██║█████╗░░╚█████╗░  ░╚███╔╝░
-██╔══╝░░██║░░░██║██║╚████║██║░░██╗██║██║░░██║██║╚████║██╔══╝░░░╚═══██   ░██╔██╗░
-██║░░░░░╚██████╔╝██║░╚███║╚█████╔╝██║╚█████╔╝██║░╚███║███████╗██████╔   ██╔╝╚██╗
-╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝░╚════╝░╚═╝░╚════╝░╚═╝░░╚══╝╚══════╝╚═════╝   ╚═╝░░╚═╝
-
-██╗░░░██╗███████╗███╗░░██╗████████╗░█████╗░███╗░░██╗░█████╗░░██████╗
-██║░░░██║██╔════╝████╗░██║╚══██╔══╝██╔══██╗████╗░██║██╔══██╗██╔════╝
-╚██╗░██╔╝█████╗░░██╔██╗██║░░░██║░░░███████║██╔██╗██║███████║╚█████╗░
-░╚████╔╝░██╔══╝░░██║╚████║░░░██║░░░██╔══██║██║╚████║██╔══██║░╚═══██╗
-░░╚██╔╝░░███████╗██║░╚███║░░░██║░░░██║░░██║██║░╚███║██║░░██║██████╔╝
-░░░╚═╝░░░╚══════╝╚═╝░░╚══╝░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═════╝░
-"""
-
-def reset_game(): #Al cerrar o perder vidas, debemos reiniciar el juego
-    global matriz, matriz_original, filas_a_mantener, cols_a_mantener, direccion_a_mantener, player_fila, matriz, matriz_original, player_col, facing_right, objetos_a_recolectar, is_dashing, dash_restante, is_jumping, salto_extendido, salto_garantizado, paused_game, player_casillas_restantes, filas_balas_canon, cols_balas_canon, direccion_balas_canon
-    matriz = copy.deepcopy(matriz_original)
-    player_fila = len(matriz) -1 
-    player_col = 0
-    facing_right = True
-    is_dashing = False
-    dash_restante = 0
-    is_jumping = False
-    salto_garantizado = 0
-    salto_extendido = 0
-    player_casillas_restantes = 90 
-    filas_balas_canon = [] 
-    cols_balas_canon = []
-    objetos_a_recolectar = 0
-    direccion_balas_canon = []
-    paused_game = False
-    player_casillas_restantes = 90 # Reworkear esto para futuro "Numero de Casillas"
-    filas_a_mantener = []
-    cols_a_mantener = []
-    direccion_a_mantener = []
-   
-    #Llamar funciones
-    encontrar_objetivos()
-    encontrar_enemigos()
-    dibujar_mapa()
-    calculo_puntos_base()
-
-
-def reintentar():
-    global ventana_actual, objetos_a_recolectar
-    ventana_actual.destroy()
-    objetos_a_recolectar = 0
-    iniciar_juego_default()
-
-def finalizar_juego_default(): #salirnos del Juego
-    global player_hp, player_casillas_restantes
-    player_hp = 3
-    player_casillas_restantes = 90
-    reset_game()
-    objetos_a_recolectar = 0
-    dibujar_mapa()
-    ventana_actual.destroy()
-
-"""
-
-▒█▄░▒█ ▀█▀ ▀█░█▀ █▀▀ █░░ 　 ▒█▀▀▄ █▀▀ █▀▀ █▀▀█ █░░█ █░░ ▀▀█▀▀ 
-▒█▒█▒█ ▒█░ ░█▄█░ █▀▀ █░░ 　 ▒█░▒█ █▀▀ █▀▀ █▄▄█ █░░█ █░░ ░░█░░ 
-▒█░░▀█ ▄█▄ ░░▀░░ ▀▀▀ ▀▀▀ 　 ▒█▄▄▀ ▀▀▀ ▀░░ ▀░░▀ ░▀▀▀ ▀▀▀ ░░▀░░
-"""
-def iniciar_juego_default():
-    global player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
-    #Primero creamos un TopLevel
-    global canvas, default_game 
-    global ventana_actual
-    default_game = tk.Toplevel()
-    ventana_actual = default_game
-    ventana_actual.title("Juego_Constructor")
-    ventana_actual.geometry("1700x900")
-    ventana_actual.resizable(False,False)
-    ventana_actual.grab_set()
-    ventana_actual.focus()
-    juego_activo = True
-    
-    #Empezar cambiando la matriz a usar
-    matriz = copy.deepcopy(matriz_default)
-    matriz_original = copy.deepcopy(matriz_original_default)
-    #Definir la posicion del jugador 
-    player_fila = len(matriz) -1 
-    player_col = 0
-
-    #Asegurarnos de que para el default si existan suficientes movimientos
-    player_hp = 3
-    player_casillas_restantes = 90
-    mapa_actual = "Predeterminado" #Esto nos servira para la escritura de highscores
-
-    #Hacemos que la ventana actual sea la que se esta usando para poder tener la logica para el constructor de mapas
-
-    #Creamos el Canvas
-    canvas = tk.Canvas(
-    ventana_actual, 
-    width=len(matriz[0]) * TAM, #Se hace el canvas en base al tamaño de la matriz
-    height=len(matriz) * TAM, 
-    bg = "White"
-    )
-    canvas.place(relx= 0.03, anchor="nw")
-    
-    #Key Binds del game
-    ventana_actual.bind("<KeyPress>", presionar_tecla)
-    ventana_actual.bind("<KeyRelease>", soltar_tecla)
-    #Poblar lista de enemigos
-    encontrar_enemigos()
-    #Definir cuantos enemigos tenemos que encontrar
-    encontrar_objetivos()
-    #Definir puntos iniciales
-    calculo_puntos_base()
-
-    
-    # Crear botones y elementos
-    fin_juego = tk.Button(ventana_actual, text="Salir a menú principal", command= lambda: finalizar_juego_default())
-    fin_juego.place(anchor="nw", rely= 0)
-
-    #Creamos labels para mostrar la informacion 
-    player_hp_label = tk.Label(ventana_actual, text=f"Vidas : {player_hp}", relief="groove")
-    player_hp_label.place(relx= 0.1, rely = 0.9)
-    
-    player_casillas_restantes_label = tk.Label(ventana_actual, text=f"Energia : {player_casillas_restantes}", relief= "groove")
-    player_casillas_restantes_label.place(relx = 0.3, rely = 0.9)
-
-    player_puntos_label = tk.Label(ventana_actual, text=f"Puntos : {player_puntos}", relief="groove")
-    player_puntos_label.place(relx= 0.5 , rely =0.9)
-    
-    player_objetivos_label = tk.Label(ventana_actual, text=f"Objetos por recolectar : {objetos_a_recolectar}", relief= "groove")
-    player_objetivos_label.place(relx = 0.7, rely= 0.9)
-
-    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
-
-    #Llamar al loop del juego
-    game_loop() 
-
-def perdiste_default():
-    global game_over, ventana_actual, player_hp, juego_activo, puntos_finales
-    juego_activo = False
-    ventana_actual.destroy()
-    game_over = tk.Toplevel()
-    ventana_actual = game_over
-    ventana_actual.resizable(False,False)
-    ventana_actual.grab_set()
-    ventana_actual.focus()
-
-    #Config de la ventana : 
-    ventana_actual.title("GameOver -- GatoAventuras")
-    ventana_actual.geometry("600x800")
-
-    #Widgets
-    perdiste_label = tk.Label(ventana_actual, text="Perdiste : (")
-    perdiste_label.pack()
-    perdiste_boton = tk.Button(ventana_actual, text="regresar a menu", command=lambda: ventana_actual.destroy())
-    perdiste_boton.pack()
-    reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:reintentar())
-    reintentar_default_boton.pack()
-    perdiste_puntos_label = tk.Label(ventana_actual, text="No obtuviste ningun punto")
-    perdiste_puntos_label.pack()
-    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
-   
-def victoria_default():
-    global ganar, ventana_actual, juego_activo, player_puntos_finales, puntos_finales
+def victoria():
+    pygame.mixer.music.load(canciones[3])
+    pygame.mixer.music.play(-1)
+    global ganar, ventana_actual, juego_activo, player_puntos_finales, puntos_finales, mapa_actual
     juego_activo = False
     ventana_actual.destroy()
     ganar = tk.Toplevel()
@@ -702,19 +543,86 @@ def victoria_default():
     #Widgets 
     ganaste_label = tk.Label(ventana_actual, text="Ganaste : )")
     ganaste_label.pack()
-    ganaste_boton = tk.Button(ventana_actual, text="regresar a menu", command=lambda: ventana_actual.destroy())
+    ganaste_boton = tk.Button(ventana_actual, text="regresar a menu", command=lambda: finalizar_juego())
     ganaste_boton.pack()
-    reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:iniciar_juego_default())
+    reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:reintentar())
     reintentar_default_boton.pack()
     ganaste_puntos_label = tk.Label(ventana_actual, text=f"Puntos Obtenidos: {player_puntos_finales}")
     ganaste_puntos_label.pack()
+    mapa_actual_label = tk.Label(ventana_actual, text=f"Mapa Jugado {mapa_actual}")
+    mapa_actual_label.pack()
+    boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
+    boton_musica.place(relx=0.0, rely=0.0)
 
     if verificar_top5(): #Si el puntaje actual es posible highscore, todo bien
         escribir_high_score = tk.Button(ventana_actual, text="¿Guardar HighScore?", command=lambda: pantalla_escritura_highscore())
         escribir_high_score.pack()
-   
+  
+    if mapa_actual == "Constructor":
+        volver_constructor_boton = tk.Button(ventana_actual, text="Volver al Constructor", command=lambda: volver_al_constructor())
+        volver_constructor_boton.pack()
+        guardar_1 = tk.Button(ventana_actual, text="Guardar en Slot 1", command=lambda: guardar_nivel(1))
+        guardar_1.pack()
+        guardar_2 = tk.Button(ventana_actual, text="Guardar en Slot 2", command=lambda: guardar_nivel(2))
+        guardar_2.pack()
+        guardar_3 = tk.Button(ventana_actual, text="Guardar en Slot 3", command=lambda: guardar_nivel(3))
+        guardar_3.pack()
+    
     ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 
+def perdiste():
+    global game_over, ventana_actual, player_hp, juego_activo, puntos_finales
+    juego_activo = False
+    ventana_actual.destroy()
+    game_over = tk.Toplevel()
+    ventana_actual = game_over
+    ventana_actual.resizable(False,False)
+    ventana_actual.grab_set()
+    ventana_actual.focus()
+
+    #Config de la ventana : 
+    ventana_actual.title("GameOver -- GatoAventuras")
+    ventana_actual.geometry("600x800")
+
+    #Widgets
+    pygame.mixer.music.load(canciones[4])
+    pygame.mixer.music.play(-1)
+    perdiste_label = tk.Label(ventana_actual, text="Perdiste : (")
+    perdiste_label.pack()
+    perdiste_boton = tk.Button(ventana_actual, text="regresar a menu", command=lambda: finalizar_juego())
+    perdiste_boton.pack()
+    reintentar_default_boton = tk.Button(ventana_actual, text="Reintentar", command=lambda:reintentar())
+    reintentar_default_boton.pack()
+    perdiste_puntos_label = tk.Label(ventana_actual, text="No obtuviste ningun punto")
+    perdiste_puntos_label.pack()
+    mapa_actual_label = tk.Label(ventana_actual, text=f"Mapa Jugado {mapa_actual}")
+    mapa_actual_label.pack()
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
+    boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
+    boton_musica.place(relx=0.0, rely=0.0)
+    if mapa_actual == "Constructor":
+        volver_constructor_boton = tk.Button(ventana_actual, text="Volver al Constructor", command=lambda: volver_al_constructor())
+        volver_constructor_boton.pack()
+
+"""
+Fundamental :
+Game Loop, actualiza el juego y lo hace funcionar!!
+"""
+def game_loop(): 
+    global gravedad, tick_enemigos, tick_limite, juego_activo
+    if not juego_activo:
+        return #Cortamos game loop
+    ventana_actual.after(gravedad, game_loop)
+    aplicar_salto()
+    aplicar_dash()
+    aplicar_gravedad() #primero activamos la gravedad
+    comprobacion_ganar_perder() #Si se mueven volver a comprobar, para evitar bugs
+    tick_enemigos += 1
+    if tick_enemigos >= tick_limite: #Basicamente, tiene que actualizarse la gravedad 3 veces para que los enemigos se empiezen a mover, esto lo hize porque son muy rapidos
+        mover_balas_canon()
+        tick_enemigos = 0
+        comprobacion_ganar_perder() #Si se mueven volver a comprobar, para evitar bugs
+    dibujar_mapa() # Dibujar de ultimo, primero refrescar 
 
 """
 ██╗░░██╗██╗░██████╗░██╗░░██╗░░░░░░░██████╗░█████╗░░█████╗░██████╗░███████╗░██████╗
@@ -831,8 +739,164 @@ def escritura_highscores():
     global saved_highscores
     file = open("high_scores.txt", "w") # No lo vaciamos, ya que "w" se encarga de eso por nosotros
     for i in saved_highscores:
-        file.write(f"{i[0]}/{i[1]}/{i[2]}\n") #f string, el {} es donde va el texto, lo demas es ttexto
+        file.write(f"{i[0]},{i[1]},{i[2]}\n") #f string, el {} es donde va el texto, lo demas es ttexto
     file.close()
+
+
+"""
+
+███████╗██╗░░░██╗███╗░░██╗░█████╗░██╗░█████╗░███╗░░██╗███████╗░██████╗  ██╗░░██╗
+██╔════╝██║░░░██║████╗░██║██╔══██╗██║██╔══██╗████╗░██║██╔════╝██╔════   ╚██╗██╔╝
+█████╗░░██║░░░██║██╔██╗██║██║░░╚═╝██║██║░░██║██╔██╗██║█████╗░░╚█████╗░  ░╚███╔╝░
+██╔══╝░░██║░░░██║██║╚████║██║░░██╗██║██║░░██║██║╚████║██╔══╝░░░╚═══██   ░██╔██╗░
+██║░░░░░╚██████╔╝██║░╚███║╚█████╔╝██║╚█████╔╝██║░╚███║███████╗██████╔   ██╔╝╚██╗
+╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝░╚════╝░╚═╝░╚════╝░╚═╝░░╚══╝╚══════╝╚═════╝   ╚═╝░░╚═╝
+
+██╗░░░██╗███████╗███╗░░██╗████████╗░█████╗░███╗░░██╗░█████╗░░██████╗
+██║░░░██║██╔════╝████╗░██║╚══██╔══╝██╔══██╗████╗░██║██╔══██╗██╔════╝
+╚██╗░██╔╝█████╗░░██╔██╗██║░░░██║░░░███████║██╔██╗██║███████║╚█████╗░
+░╚████╔╝░██╔══╝░░██║╚████║░░░██║░░░██╔══██║██║╚████║██╔══██║░╚═══██╗
+░░╚██╔╝░░███████╗██║░╚███║░░░██║░░░██║░░██║██║░╚███║██║░░██║██████╔╝
+░░░╚═╝░░░╚══════╝╚═╝░░╚══╝░░░╚═╝░░░╚═╝░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═════╝░
+"""
+
+def reset_game(): #Al cerrar o perder vidas, debemos reiniciar el juego
+    global matriz, casillas_reset, inicio_fila, inicio_col, matriz_original, filas_a_mantener, cols_a_mantener, direccion_a_mantener, player_fila, matriz, matriz_original, player_col, facing_right, objetos_a_recolectar, is_dashing, dash_restante, is_jumping, salto_extendido, salto_garantizado, paused_game, player_casillas_restantes, filas_balas_canon, cols_balas_canon, direccion_balas_canon
+    matriz = copy.deepcopy(matriz_original)
+    player_fila = inicio_fila
+    player_col = inicio_col
+    facing_right = True
+    is_dashing = False
+    dash_restante = 0
+    is_jumping = False
+    salto_garantizado = 0
+    salto_extendido = 0
+    player_casillas_restantes = casillas_reset 
+    filas_balas_canon = [] 
+    cols_balas_canon = []
+    objetos_a_recolectar = 0
+    direccion_balas_canon = []
+    paused_game = False
+    player_casillas_restantes = casillas_reset # Reworkear esto para futuro "Numero de Casillas"
+    filas_a_mantener = []
+    cols_a_mantener = []
+    direccion_a_mantener = []
+   
+    #Llamar funciones
+    encontrar_objetivos()
+    encontrar_enemigos()
+    dibujar_mapa()
+    calculo_puntos_base()
+
+def reintentar():
+    global ventana_actual, objetos_a_recolectar, mapa_actual
+    ventana_actual.destroy()
+    objetos_a_recolectar = 0
+    if mapa_actual == "Constructor":
+        iniciar_juego_constructor()
+    else: 
+        iniciar_juego_default()
+
+def finalizar_juego(): #salirnos del Juego
+    pygame.mixer.music.load(canciones[0])
+    pygame.mixer.music.play(-1)
+    global player_hp, player_casillas_restantes, ventana_actual, objetos_a_recolectar, mapa_actual 
+    player_hp = 3
+    player_casillas_restantes = 90
+    objetos_a_recolectar = 0
+    if mapa_actual == "Constructor":
+        limpiar_matriz_constructor()
+    ventana_actual.destroy()
+
+"""
+
+▒█▄░▒█ ▀█▀ ▀█░█▀ █▀▀ █░░ 　 ▒█▀▀▄ █▀▀ █▀▀ █▀▀█ █░░█ █░░ ▀▀█▀▀ 
+▒█▒█▒█ ▒█░ ░█▄█░ █▀▀ █░░ 　 ▒█░▒█ █▀▀ █▀▀ █▄▄█ █░░█ █░░ ░░█░░ 
+▒█░░▀█ ▄█▄ ░░▀░░ ▀▀▀ ▀▀▀ 　 ▒█▄▄▀ ▀▀▀ ▀░░ ▀░░▀ ░▀▀▀ ▀▀▀ ░░▀░░
+"""
+def iniciar_juego_default():
+    pygame.mixer.music.load(canciones[1])
+    pygame.mixer.music.play(-1)
+    global filas_balas_canon, cols_balas_canon, direccion_balas_canon, inicio_col, inicio_fila, casillas_reset, mapa_actual, player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
+    #Primero creamos un TopLevel
+    global canvas, default_game 
+    global ventana_actual
+    default_game = tk.Toplevel()
+    ventana_actual = default_game
+    ventana_actual.title("Juego_Default!")
+    ventana_actual.geometry("1700x900")
+    ventana_actual.resizable(False,False)
+    ventana_actual.grab_set()
+    ventana_actual.focus()
+    juego_activo = True
+    
+    #Empezar cambiando la matriz a usar
+    matriz = copy.deepcopy(matriz_default)
+    matriz_original = copy.deepcopy(matriz_original_default)
+    #Definir la posicion del jugador 
+    player_fila = len(matriz) -1 
+    player_col = 0
+    inicio_fila = len(matriz) -1
+    inicio_col = 0
+
+    #Asegurarnos de que para el default si existan suficientes movimientos
+    player_hp = 3
+    player_casillas_restantes = 90
+    casillas_reset = 90
+    mapa_actual = "Predeterminado" #Esto nos servira para la escritura de highscores
+
+    #Hacemos que la ventana actual sea la que se esta usando para poder tener la logica para el constructor de mapas
+
+    #Creamos el Canvas
+    canvas = tk.Canvas(
+    ventana_actual, 
+    width=len(matriz[0]) * TAM, #Se hace el canvas en base al tamaño de la matriz
+    height=len(matriz) * TAM, 
+    bg = "White"
+    )
+    canvas.place(relx= 0.03, anchor="nw")
+    
+    #Key Binds del game
+    ventana_actual.bind("<KeyPress>", presionar_tecla)
+    ventana_actual.bind("<KeyRelease>", soltar_tecla)
+
+    filas_balas_canon = []
+    cols_balas_canon = []
+    direccion_balas_canon = []
+    #Poblar lista de enemigos
+    encontrar_enemigos()
+    #Definir cuantos enemigos tenemos que encontrar
+    encontrar_objetivos()
+    #Definir puntos iniciales
+    calculo_puntos_base()
+
+    boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
+    boton_musica.place(relx=0.0, rely=0.0)
+    
+    # Crear botones y elementos
+    fin_juego = tk.Button(ventana_actual, text="Salir a menú principal", command= lambda: finalizar_juego())
+    fin_juego.place(anchor="nw", rely= 0)
+
+    #Creamos labels para mostrar la informacion 
+    player_hp_label = tk.Label(ventana_actual, text=f"Vidas : {player_hp}", relief="groove")
+    player_hp_label.place(relx= 0.1, rely = 0.9)
+    
+    player_casillas_restantes_label = tk.Label(ventana_actual, text=f"Energia : {player_casillas_restantes}", relief= "groove")
+    player_casillas_restantes_label.place(relx = 0.3, rely = 0.9)
+
+    player_puntos_label = tk.Label(ventana_actual, text=f"Puntos : {player_puntos}", relief="groove")
+    player_puntos_label.place(relx= 0.5 , rely =0.9)
+    
+    player_objetivos_label = tk.Label(ventana_actual, text=f"Objetos por recolectar : {objetos_a_recolectar}", relief= "groove")
+    player_objetivos_label.place(relx = 0.7, rely= 0.9)
+
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
+
+    #Llamar al loop del juego
+    dibujar_mapa()
+
+    game_loop() 
+
 
 """
 
@@ -851,7 +915,9 @@ def escritura_highscores():
 ╚═╝░░░░░╚═╝╚═╝░░╚═╝╚═╝░░░░░╚═╝░░╚═╝╚═════╝░
 """
 def iniciar_creador_de_mapas():
-    global  canvas, constructor_mapas, constructor_fila, constructor_col, ventana_actual, label_puntos_creador, entry_cambiar_vida
+    pygame.mixer.music.load(canciones[2])
+    pygame.mixer.music.play(-1)
+    global  mapa_actual, canvas, entry_cambiar_energia,constructor_mapas,vidas_constructor, casillas_restantes_constructor, constructor_fila, constructor_col, ventana_actual, label_puntos_creador, entry_cambiar_vida
     constructor_mapas = tk.Toplevel()
     ventana_actual = constructor_mapas
     ventana_actual.title("Constructor de Mapas")
@@ -859,7 +925,7 @@ def iniciar_creador_de_mapas():
     ventana_actual.resizable(False,False)
     ventana_actual.grab_set()
     ventana_actual.focus()
-
+    mapa_actual = "Constructor"
     #Creamos el Canvas
     canvas = tk.Canvas(
     ventana_actual, 
@@ -887,6 +953,9 @@ def iniciar_creador_de_mapas():
     borrar_todos = tk.Button(ventana_actual, text="Borrar Todo", command= lambda: limpiar_matriz_constructor())
     borrar_todos.place(relx=0.0, rely=0.8)
     
+    boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
+    boton_musica.place(relx=0.0, rely=0.0)
+    
     #Label que nos calcula los puntos del nivel 
     label_puntos_creador = tk.Label(ventana_actual, text="Aqui veras los puntos del mapa!")
     label_puntos_creador.place(relx =0.0, rely=0.9)
@@ -895,17 +964,17 @@ def iniciar_creador_de_mapas():
     entry_cambiar_vida = tk.Entry(ventana_actual)
     entry_cambiar_vida.config(font=("Arial, 14"), justify="center")
     entry_cambiar_vida.place(relx =0.5, rely = 0.9)
-    entry_cambiar_vida.insert(0,"Cantidad de vidas (num entero)!")
-    boton_cambiar_vida = tk.Button(ventana_actual, text="Vidas")
+    entry_cambiar_vida.insert(0,f"Define Vidas, Actuales {vidas_constructor}")
+    boton_cambiar_vida = tk.Button(ventana_actual, text="Vidas", command=lambda: config_vida())
 
     entry_cambiar_vida.place(relx=0.5, rely=0.85)
     boton_cambiar_vida.place(relx=0.5, rely=0.92)
 
     entry_cambiar_energia = tk.Entry(ventana_actual)
     entry_cambiar_energia.config(font=("Arial, 14"), justify="center")
-    entry_cambiar_energia.insert(0,"Define la energia (num entero)!")
+    entry_cambiar_energia.insert(0,f"Define Energia, Actual {casillas_restantes_constructor}")
 
-    boton_cambiar_energia = tk.Button(ventana_actual, text= "Energia")
+    boton_cambiar_energia = tk.Button(ventana_actual, text= "Energia", command=lambda: config_energia())
     
     entry_cambiar_energia.place(relx=0.7, rely=0.85)
     boton_cambiar_energia.place(relx=0.7, rely=0.92)
@@ -914,6 +983,21 @@ def iniciar_creador_de_mapas():
     empezar_a_jugar = tk.Button(ventana_actual, text="Empezar a Jugar!!", command=lambda: jugar_el_nivel())
     empezar_a_jugar.place(relx= 0.3, rely=0.9)
 
+     #Boton para borrar todo
+    borrar_todo = tk.Button(ventana_actual, text="Borrar Todo", command=lambda:[limpiar_matriz_constructor(), label_puntos_creador.config(text="Has limpiado el nivel!")])
+    borrar_todo.place(relx = 0.2, rely =0.9)
+
+    #Cargar mapas
+    cargar_1 = tk.Button(ventana_actual, text="Cargar Slot 1", command=lambda: cargar_nivel(1))
+    cargar_1.pack()
+    cargar_2 = tk.Button(ventana_actual, text="Cargar Slot 2", command=lambda: cargar_nivel(2))
+    cargar_2.pack()
+    cargar_3 = tk.Button(ventana_actual, text="Cargar Slot 3", command=lambda: cargar_nivel(3))
+    cargar_3.pack()
+
+    #Boton salir del constructor :(
+    salir_constructor_boton = tk.Button(ventana_actual, text="Salir sin guardar", command=lambda: salir_constructor())
+    salir_constructor_boton.place(relx =0.4, rely=0.9)
     ventana_actual.bind("<KeyPress>", mover_constructor)
     dibujar_mapa_constructor()
     ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
@@ -926,6 +1010,7 @@ def iniciar_creador_de_mapas():
 ▒█▄▄█ ▀░░▀ ▀░░▀ ░░▀░░ ▀░░▀ ▀▀▀ ░░ ▀▀▀ ▀▀▀▀ ▀░░▀ ▀▀▀ ░░▀░░ ▀░▀▀ ░▀▀▀ ▀▀▀ ░░▀░░ ▀▀▀▀ ▀░▀▀
 """
 def dibujar_mapa_constructor():
+        global puntos_constructor, label_puntos_creador
         canvas.delete("all")
         #recorremos la matriz para pinta cada 0,1,2 o 3
         for fila in range(len(matriz_constructor)):
@@ -1020,7 +1105,7 @@ def cambiar_bloque(id): #Le ponemos un ID que sera el bloque que queremos constr
         elif id == 4:
             puntos_constructor += 50
     
-    label_puntos_creador.config(text=f"Puntos Minimos : {puntos_constructor}")
+    label_puntos_creador.config(text=f"Puntos Minimos : {puntos_constructor + 1*30}")
 
     dibujar_mapa_constructor()
 
@@ -1049,7 +1134,6 @@ def limpiar_matriz_constructor():
         for j in range(len(matriz_constructor[0])):
             matriz_constructor[i][j] = 0
     puntos_constructor = 0 #Reseteamos los puntos
-    label_puntos_creador.config(text="Has limpiado el nivel!") #Indicarle al jugador la accion que acaba de realizar
     dibujar_mapa_constructor()
 
 
@@ -1058,8 +1142,33 @@ Configurar Vidas y Casillas
 """
 
 def config_vida():
-    global entry_cambiar_vida #Esto nos sirve para hacer get
+    global entry_cambiar_vida, vidas_constructor, label_puntos_creador #Esto nos sirve para hacer get
+    try :
+        vidas_constructor = int(entry_cambiar_vida.get())
+        if vidas_constructor > 0:
+            label_puntos_creador.config(text =f"Haz cambiado las vidas a {vidas_constructor}")
+            print(vidas_constructor)
+        else :
+            vidas_constructor = 3
+            label_puntos_creador.config(text =f"Valor no válido en vidas, cambiadas a {vidas_constructor}")
+    except :
+        vidas_constructor = 3
+        label_puntos_creador.config(text =f"Valor no válido en vidas, cambiadas a {vidas_constructor}")
 
+def config_energia():
+    global entry_cambiar_energia, casillas_restantes_constructor, label_puntos_creador, puntos_creador#Esto nos sirve para hacer get
+    try :
+        casillas_restantes_constructor = int(entry_cambiar_energia.get())
+        if casillas_restantes_constructor > 0:
+            label_puntos_creador.config(text =f"Haz cambiado la energia a {casillas_restantes_constructor}, los puntos")
+            print(casillas_restantes_constructor)
+        else:
+            casillas_restantes_constructor = 90
+            label_puntos_creador.config(text =f"Valor no válido en energia, cambiada a {casillas_restantes_constructor}")
+    except :
+        casillas_restantes_constructor = 90
+        label_puntos_creador.config(text =f"Valor no válido en energia, cambiada a {vidas_constructor}")
+        
 
 """
 ▒█▀▀█ █▀▀█ █▀▀▄ █▀▀ ▀▀█▀▀ █▀▀█ █░░█ █▀▀ ▀▀█▀▀ █▀▀█ █▀▀█ ░░ █▀▄▀█ █▀▀█ ▀█░█▀ █▀▀ █▀▀█ 
@@ -1070,6 +1179,9 @@ def config_vida():
 
 def mover_constructor (event):
         global constructor_fila, constructor_col   #indicarle al def que use las variables globales
+        if isinstance(event.widget, tk.Entry):
+            return
+
         nueva_fila = constructor_fila
         nueva_col =  constructor_col
 
@@ -1101,6 +1213,64 @@ def puede_moverse_constructor (fila, col):
 
 """
 
+▒█░░▒█ ▒█▀▀▀ ▒█▄░▒█ ▀▀█▀▀ ░█▀▀█ ▒█▄░▒█ ░█▀▀█ ▒█▀▀▀█ ░░ ▒█▀▀█ ▒█▀▀▀█ ▒█▄░▒█ ▒█▀▀▀█ ▀▀█▀▀ ▒█▀▀█ ▒█░▒█ ▒█▀▀█ ▀▀█▀▀ ▒█▀▀▀█ ▒█▀▀█ 
+░▒█▒█░ ▒█▀▀▀ ▒█▒█▒█ ░▒█░░ ▒█▄▄█ ▒█▒█▒█ ▒█▄▄█ ░▀▀▀▄▄ ▀▀ ▒█░░░ ▒█░░▒█ ▒█▒█▒█ ░▀▀▀▄▄ ░▒█░░ ▒█▄▄▀ ▒█░▒█ ▒█░░░ ░▒█░░ ▒█░░▒█ ▒█▄▄▀ 
+░░▀▄▀░ ▒█▄▄▄ ▒█░░▀█ ░▒█░░ ▒█░▒█ ▒█░░▀█ ▒█░▒█ ▒█▄▄▄█ ░░ ▒█▄▄█ ▒█▄▄▄█ ▒█░░▀█ ▒█▄▄▄█ ░▒█░░ ▒█░▒█ ░▀▄▄▀ ▒█▄▄█ ░▒█░░ ▒█▄▄▄█ ▒█░▒█
+"""
+def salir_constructor():
+    global vidas_constructor, casillas_restantes_constructor, puntos_constructor
+    limpiar_matriz_constructor()
+    vidas_constructor = 3
+    casillas_restantes_constructor = 90
+    puntos_constructor = 0
+    ventana_actual.destroy()
+    pygame.mixer.music.load(canciones[0])
+    pygame.mixer.music.play(-1)
+
+def volver_al_constructor():
+    global juego_activo
+    juego_activo = False
+    ventana_actual.destroy()
+    iniciar_creador_de_mapas()
+"""
+Guardar/Cargar Nivel
+"""
+
+def cargar_nivel(slot):
+    global matriz_constructor 
+    matriz_constructor = []
+    if slot == 1:
+        file = open("nivel1.txt", "r")
+    elif slot == 2:
+        file = open("nivel2.txt", "r")
+    elif slot == 3:
+        file = open("nivel3.txt", "r")
+    
+    try :
+        for fila in file:
+            datos = fila.strip().split(",") #Se cargan los datos
+            fila = [int(x) for x in datos] # Expresion generadora
+            matriz_constructor.append(fila)
+        file.close()
+        dibujar_mapa_constructor()
+    except :
+        pass 
+
+def guardar_nivel(slot):
+    global matriz_original
+    if slot == 1:
+        file = open("nivel1.txt", "w")
+    elif slot == 2:
+        file = open("nivel2.txt", "w")
+    elif slot == 3:
+        file = open("nivel3.txt", "w")
+    
+    for fila in matriz_original:
+        file.write(",".join([str(x) for x in fila]) + "\n")#Join junta todo en un solo elemento
+    file.close()
+
+"""
+
 ░░▀ █░░█ █▀▀▀ █▀▀█ █▀▀█ 　 █▀▀ █░░ 　 █▀▀▄ ░▀░ ▀█░█▀ █▀▀ █░░ 
 ░░█ █░░█ █░▀█ █▄▄█ █▄▄▀ 　 █▀▀ █░░ 　 █░░█ ▀█▀ ░█▄█░ █▀▀ █░░ 
 █▄█ ░▀▀▀ ▀▀▀▀ ▀░░▀ ▀░▀▀ 　 ▀▀▀ ▀▀▀ 　 ▀░░▀ ▀▀▀ ░░▀░░ ▀▀▀ ▀▀▀
@@ -1113,17 +1283,112 @@ def hay_objetivo():
                 return True #Solo tiene que haber un objetvio
     return False
 
+def guardar_pos_inicio():
+    global inicio_fila, inicio_col, matriz_constructor
+    for i in range(len(matriz_constructor)):
+        for j in range(len(matriz_constructor[0])):
+            if matriz_constructor[i][j] == 6:
+                inicio_col = j
+                inicio_fila = i
+
 def jugar_el_nivel(): #Tiene que validar que el nivel sea posible 
-    global label_puntos_creador
+    global casillas_reset, label_puntos_creador, matriz, matriz_original, player_hp, player_casillas_restantes, vidas_constructor, casillas_restantes_constructor
     if not hay_objetivo():
         label_puntos_creador.config(text="No hay objetivo, el nivel NO es jugable :(")
         return
     elif not hay_punto_de_inicio():
         label_puntos_creador.config(text="No hay un punto de inicio, el nivel NO es jugable :(")
         return 
-    else : 
-        pass 
+    else : # Se cumplen ambas condiciones
+        guardar_pos_inicio()
+        matriz_original = copy.deepcopy(matriz_constructor)
+        matriz = copy.deepcopy(matriz_constructor)
+        player_hp = vidas_constructor
+        player_casillas_restantes = casillas_restantes_constructor
+        ventana_actual.unbind("KeyPress")
+        ventana_actual.destroy()
+        casillas_reset = casillas_restantes_constructor
+        iniciar_juego_constructor()
+        
+        
+def iniciar_juego_constructor():
+    pygame.mixer.music.load(canciones[1])
+    pygame.mixer.music.play(-1)
+    global objetos_a_recolectar, filas_balas_canon, cols_balas_canon,direccion_balas_canon,player_hp, inicio_fila, inicio_col, player_fila, player_col, matriz, matriz_default, matriz_original, mapa_actual, juego_activo, player_hp_label, player_puntos_label, player_casillas_restantes_label, player_objetivos_label, player_hp, player_casillas_restantes
+    print("matriz_original[0]:", matriz_original[0])
+    print("matriz[0]:", matriz[0])
+   
+    #Primero creamos un TopLevel
+    global canvas, constructor_game
+    global ventana_actual
+    constructor_game = tk.Toplevel()
+    ventana_actual = constructor_game 
+    ventana_actual.title("Juego_Constructor")
+    ventana_actual.geometry("1700x900")
+    ventana_actual.resizable(False,False)
+    ventana_actual.grab_set()
+    ventana_actual.focus()
+    juego_activo = True
+    
+    mapa_actual = "Constructor" #Esto nos servira para la escritura de highscores
 
+    #Hacemos que la ventana actual sea la que se esta usando para poder tener la logica para el constructor de mapas
+    player_fila = inicio_fila
+    player_col = inicio_col 
+
+    player_hp = vidas_constructor
+
+    
+    #Creamos el Canvas
+    canvas = tk.Canvas(
+    ventana_actual, 
+    width=len(matriz[0]) * TAM, #Se hace el canvas en base al tamaño de la matriz
+    height=len(matriz) * TAM, 
+    bg = "White"
+    )
+    canvas.place(relx= 0.03, anchor="nw")
+    
+    #Key Binds del game
+    ventana_actual.bind("<KeyPress>", presionar_tecla)
+    ventana_actual.bind("<KeyRelease>", soltar_tecla)
+
+    #Evitar bugs de enemigos repetidos
+    filas_balas_canon = []
+    cols_balas_canon = []
+    direccion_balas_canon = []
+
+    #Poblar lista de enemigos
+    encontrar_enemigos()
+
+    objetos_a_recolectar = 0 # Evitar bug
+    #Definir cuantos objetivos tenemos que encontrar
+    encontrar_objetivos()
+    #Definir puntos iniciales
+    calculo_puntos_base() 
+
+    fin_juego = tk.Button(ventana_actual, text="Salir a menú principal", command= lambda: finalizar_juego())
+    fin_juego.place(anchor="nw", rely= 0)
+
+    #Creamos labels para mostrar la informacion 
+    global player_hp_label, player_casillas_restantes_label, player_puntos_label, player_objetivos_label
+    player_hp_label = tk.Label(ventana_actual, text=f"Vidas : {player_hp}", relief="groove")
+    player_hp_label.place(relx= 0.1, rely = 0.9)
+    
+    player_casillas_restantes_label = tk.Label(ventana_actual, text=f"Energia : {player_casillas_restantes}", relief= "groove")
+    player_casillas_restantes_label.place(relx = 0.3, rely = 0.9)
+
+    player_puntos_label = tk.Label(ventana_actual, text=f"Puntos : {player_puntos}", relief="groove")
+    player_puntos_label.place(relx= 0.5 , rely =0.9)
+    
+    player_objetivos_label = tk.Label(ventana_actual, text=f"Objetos por recolectar : {objetos_a_recolectar}", relief= "groove")
+    player_objetivos_label.place(relx = 0.7, rely= 0.9)
+
+    boton_musica = tk.Button(ventana_actual, text="Música", command=lambda: toggle_musica())
+    boton_musica.place(relx=0.0, rely=0.0)
+    #Llamar a game loop!
+    game_loop()
+
+    ventana_actual.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 
 
 #Main window
@@ -1133,6 +1398,8 @@ boton_constructor_mapas = tk.Button(root, text="Iniciar Constructor de Mapas", c
 boton_constructor_mapas.pack()
 boton_high_scores = tk.Button(root, text="HighScores",command=lambda: show_highscores())
 boton_high_scores.pack()
+boton_musica = tk.Button(root, text="Música", command=lambda: toggle_musica())
+boton_musica.place(relx=0.0, rely=0.0)
 
 root.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 

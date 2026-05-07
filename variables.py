@@ -1,4 +1,5 @@
 import copy
+
 """
 
 ██╗░░░██╗░█████╗░██████╗░██╗░█████╗░██████╗░██╗░░░░░███████╗░██████╗
@@ -70,6 +71,7 @@ Info Matriz
 player_fila = len(matriz) -1 
 player_col = 0
 
+
 # Variables a usar del movimiento del Jugador
 facing_right = True
 is_dashing = False
@@ -85,6 +87,8 @@ player_casillas_restantes = 90 # Sera la energia del jugador y no nos podemos ex
 
 # Set de teclas presionadas
 teclas_presionadas = [] #Usamos un set que es un conjunto sin duplicados y en este caso sera mas eficiente para saber cuales teclas estan presionadas, ya que no puede tener items repetidos
+casillas_reset = 90 
+
 
 #Constantes para el tiempo after()
 gravedad = 80
@@ -122,3 +126,20 @@ constructor_fila = 0
 constructor_col = 0  
 celda_seleccionada = 0
 puntos_constructor = 0
+vidas_constructor = 3
+casillas_restantes_constructor = 90
+
+#Variables de Cancion
+
+canciones = ["Assets/Audios/Main_Menu.mp3", "Assets/Audios/Jugar_Cancion.mp3", "Assets/Audios/Constructor_Cancion.mp3", "Assets/Audios/Ganaste_Cancion.mp3", "Assets/Audios/Perdiste_Cancion.mp3"]
+
+#Variables de imagenes
+
+img_bloque = None
+img_escalera = None
+img_obstaculo = None 
+img_enemigo = None
+img_pescado = None
+img_gato_der = None
+img_gato_izq = None
+
