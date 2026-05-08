@@ -13,10 +13,13 @@ pygame.mixer.music.load(canciones[0])
 pygame.mixer.music.play(-1)
 
 def toggle_musica():
-    if pygame.mixer.music.get_busy(): #Get Busy return true si esta reproduciendo musica
+    global reproducir_musica
+    if pygame.mixer.music.get_busy() and reproducir_musica: #Get Busy return true si esta reproduciendo musica
         pygame.mixer.music.pause()
+        reproducir_musica = False
     else:
         pygame.mixer.music.unpause()
+        reproducir_musica = True
 
 # Acceder a la informacion al abrir el documento
 def leer_archivo_highscores():
@@ -726,8 +729,8 @@ def agregar_score():
             if saved_highscores[i][1] == punto_a_eliminar:
                 index_a_eliminar = i
                 break
-       
-        # eliminar datos
+        
+            # eliminar datos
         saved_puntos.pop(index_a_eliminar) #Usan el mismo ya que ambas comparten el mismo orden
         saved_highscores.pop(index_a_eliminar)  
 

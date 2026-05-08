@@ -150,3 +150,5 @@ img_fondo_juego = None
 img_fondo_main = None
 img_fondo_victoria = None
 img_fondo_derrota = None
+
+reproducir_musica = True
