@@ -499,7 +499,7 @@ def comprobacion_ganar_perder():
         if player_hp == 0: #Si nos quedamos sin vidas o sin energia :(
             ventana_actual.after(1, perdiste) # Asegurarnos de que game loop no se ejecte mientras cambiamos de ventana
             reset_game()
-            return
+            return 
         else:
             paused_game = True
             reset_game()
@@ -837,6 +837,7 @@ def iniciar_juego_default():
     ventana_actual.grab_set()
     ventana_actual.focus()
     juego_activo = True
+   
     #Bg Label 
     bg_label = tk.Label(ventana_actual, image=img_fondo_juego)
     bg_label.place(x=0,y=0)
@@ -1404,4 +1405,3 @@ root.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
 
 #Main loop
 root.mainloop()
-
